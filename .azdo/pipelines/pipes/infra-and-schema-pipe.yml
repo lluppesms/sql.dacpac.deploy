@@ -1,0 +1,65 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline Template to build and deploy Azure Resources and Database
+# ------------------------------------------------------------------------------------------------------------------------
+parameters:
+- name: environments
+  type: object
+  default: ['DEMO']
+- name: appFolderName
+  default: ''
+- name: appSolutionName
+  default: ''
+- name: appProjectName
+  default: ''
+- name: runDevSecOpsScan
+  default: 'false'
+- name: runPsRuleScan
+  default: 'false'
+- name: runGHASScan
+  default: 'false'
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- ${{ if or(or(eq(lower(parameters.runDevSecOpsScan), 'true'), eq(lower(parameters.runPsRuleScan), 'true')), eq(lower(parameters.runGHASScan), 'true')) }}:
+  - stage: ScanApplication
+    displayName: Scan Application
+    jobs:
+    - template: templates/scan-code-template.yml
+      parameters:
+        environmentName: 'DEMO'
+        runDevSecOpsScan: ${{ parameters.runDevSecOpsScan }}
+        runPsRuleScan: ${{ parameters.runPsRuleScan }}
+        runGHASScan: ${{ parameters.runGHASScan }}
+
+- stage: BuildDacPac
+  displayName: Build DACPAC
+  jobs:
+  - template: templates/dacpac-build-template.yml
+    parameters:
+      environmentName: 'DEMO'
+      appFolderName: ${{ parameters.appFolderName }}
+      appSolutionName: ${{ parameters.appSolutionName }}
+      appProjectName: ${{ parameters.appProjectName }}
+      artifactName: 'dacpac'
+
+# ----------------------------------------------------------------------------------------------------
+- ${{ each environmentName in parameters.environments }} :
+  - stage: CreateInfra${{ environmentName }}
+    displayName: Create ${{ environmentName }} Resources
+    dependsOn: BuildDacPac
+    condition: succeeded('BuildDacPac')
+    jobs:
+    - template: templates/create-infra-template.yml
+      parameters:
+        environmentName: ${{ environmentName }}
+
+  - stage: Deploy${{ environmentName }}Schema
+    displayName: Deploy ${{ environmentName }} Schema
+    dependsOn: CreateInfra${{ environmentName }}
+    condition: succeeded('CreateInfra${{ environmentName }}')
+    jobs:
+    - template: templates/dacpac-deploy-template.yml
+      parameters:
+        environmentName: ${{ environmentName }}
+        artifactName: 'dacpac'
+        appProjectName: ${{ parameters.appProjectName }}

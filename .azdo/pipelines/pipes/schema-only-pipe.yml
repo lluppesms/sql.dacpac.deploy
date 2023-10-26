@@ -1,0 +1,37 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline Template to build Database Objects Only to existing resources
+# ------------------------------------------------------------------------------------------------------------------------
+parameters:
+- name: environments
+  type: object
+  default: ['DEMO']
+- name: appFolderName
+  default: ''
+- name: appSolutionName
+  default: ''
+- name: appProjectName
+  default: ''
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- stage: BuildDacPac
+  displayName: Build DACPAC
+  jobs:
+  - template: templates/dacpac-build-template.yml
+    parameters:
+      environmentName: 'DEMO'
+      appFolderName: ${{ parameters.appFolderName }}
+      appSolutionName: ${{ parameters.appSolutionName }}
+      appProjectName: ${{ parameters.appProjectName }}
+      artifactName: 'dacpac'
+
+# ----------------------------------------------------------------------------------------------------
+- ${{ each environmentName in parameters.environments }} :
+  - stage: Deploy${{ environmentName }}Schema
+    displayName: Deploy ${{ environmentName }} Schema
+    jobs:
+    - template: templates/dacpac-deploy-template.yml
+      parameters:
+        environmentName: ${{ environmentName }}
+        artifactName: 'dacpac'
+        appProjectName: ${{ parameters.appProjectName }}

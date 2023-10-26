@@ -1,0 +1,69 @@
+# ----------------------------------------------------------------------------------------------------
+# Template to deploy a SQL Dacpac File to a SQL Database
+# ----------------------------------------------------------------------------------------------------
+parameters: 
+- name: environmentName
+  default:  'DEMO'
+- name: artifactName
+  default: 'dacpac'
+- name: appProjectName
+  default: ''
+
+# ------------------------------------------------------------------------------------------------------------------------
+jobs:
+- deployment: Deploy${{ parameters.environmentName }}Schema
+  displayName: Initialize ${{ parameters.environmentName }} Deploy Schema
+  environment: ${{ parameters.environmentName }}
+
+- job: DeployDB${{ parameters.environmentName }}Schema
+  displayName: Deploy ${{ parameters.environmentName }} Schema
+  variables:
+    - name: environmentNameUpper
+      value: ${{ upper(parameters.environmentName) }}
+    - name: environmentNameLower
+      value: ${{ lower(parameters.environmentName) }}
+    - name: sqlServerName
+      value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
+    - name: fqdnServerName
+      value: $(sqlServerName).database.windows.net
+
+  steps:
+  - task: DownloadBuildArtifacts@0
+    displayName: 'Download Build Artifacts'
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: '${{ parameters.artifactName }}'
+      downloadPath: '$(System.ArtifactsDirectory)'
+
+  - task: CmdLine@2
+    displayName: 'Display Variables and Files'
+    inputs:
+      script: |
+        echo "serviceConnectionName=$(serviceConnectionName)"
+        echo "environmentNameUpper=$(environmentNameUpper)"
+        echo "environmentNameLower=$(environmentNameLower)"
+        echo "artifactName=${{ parameters.artifactName }}"
+        echo "sqlServerNamePrefix=$(sqlServerNamePrefix)"
+        echo "sqlServerName=$(sqlServerName)"
+        echo "fqdnServerName=$(fqdnServerName)"
+        echo "sqlDatabaseName=$(sqlDatabaseName)"
+        echo "sqlAdminUser=$(sqlAdminUser)"
+        echo "sqlAdminPassword=$(sqlAdminPassword)"
+        echo "DacpacFileLocation=$$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\*.dacpac"
+        echo "Directory of Artifacts Directory: $(System.ArtifactsDirectory)"
+        dir $(System.ArtifactsDirectory) /s
+    continueOnError: true
+
+  - task: SqlAzureDacpacDeployment@1
+    displayName: 'Deploy Azure SQL DB'
+    inputs:
+      azureSubscription: '$(serviceConnectionName)'
+      ServerName: '$(fqdnServerName)'
+      DatabaseName: '$(sqlDatabaseName)'
+      DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+      AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+      SqlUsername: '$(sqlAdminUser)'
+      SqlPassword: '$(sqlAdminPassword)'
+      DeleteFirewallRule: false
+      

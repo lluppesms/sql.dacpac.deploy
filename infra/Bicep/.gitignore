@@ -1,0 +1,6 @@
+*.json
+*.ps1
+Run_Deploy_Locally.ps1
+!resourceAbbreviations.json
+!vnet.nsgCommonRules*.json
+!vnet.nsgCustomRules*.json

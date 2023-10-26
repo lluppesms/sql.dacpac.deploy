@@ -1,0 +1,205 @@
+# ----------------------------------------------------------------------------------------------------
+# Template to deploy Azure Resources for one environment
+# ----------------------------------------------------------------------------------------------------
+parameters:
+- name: environmentName
+  default: 'DEMO'
+- name: templateFolderName
+  default: 'infra/Bicep'
+- name: templateFileName
+  default: 'main.bicep'
+
+# ----------------------------------------------------------------------------------------------------
+jobs:
+- deployment: CreateInfra
+  displayName: Initialize Create Infra
+  environment: ${{ parameters.environmentName }}
+
+- job: CreateInfraJob
+  displayName: Create Infrastructure
+  variables:
+    - name: environmentNameUpper
+      value: ${{ upper(parameters.environmentName) }}
+    - name: environmentNameLower
+      value: ${{ lower(parameters.environmentName) }}
+    - name: templateFile
+      value: '$(Pipeline.Workspace)/s/${{ parameters.templateFolderName }}/${{ parameters.templateFileName }}'
+    - name: compiledJsonFile
+      value: '${{ parameters.templateFolderName }}/compiled.json'
+    - name: dacpacDirectoryVar
+      value: '$(dacpacDirectory)'
+    - name: dacpacFileNameVar
+      value: '$(dacpacFileName)'
+
+  steps:
+  - bash: |
+      appNameLower=$(echo "$(appName)" | tr '[:upper:]' '[:lower:]')
+      echo "appName=$(appName)"
+      echo "appNameLower=$appNameLower"
+      echo "##vso[task.setvariable variable=appNameLower]$appNameLower"
+
+      resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
+      echo "resourceGroupName=$resourceGroupName"
+      echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+      
+      runDateTime=$(echo $(date '+%Y%m%d-%H%M%S'))
+      echo "##vso[task.setvariable variable=runDateTime]$runDateTime"
+      echo "runDateTime=$runDateTime"
+                                   
+      runDateTimeZ=$(echo $(date '+%Y%m%dT%H%M%SZ'))
+      echo "##vso[task.setvariable variable=runDateTimeZ]$runDateTimeZ"
+      echo "runDateTimeZ=$runDateTimeZ"
+    displayName: 'Create Variables'
+    continueOnError: true
+
+  - bash: |
+      echo "subscriptionName=$(subscriptionName)"
+      echo "resourceGroupName=$(resourceGroupName)"
+      echo "environmentNameUpper=$(environmentNameUpper)"
+      echo "environmentNameLower=$(environmentNameLower)"
+      echo "resourceGroupName=$(resourceGroupName)"
+      echo "serviceConnectionName=$(serviceConnectionName)"
+      echo "subscriptionId=$(subscriptionId)"
+      echo "location=$(location)"
+      echo "appName=$(appName)"
+      echo "appNameLower=$(appNameLower)"
+      echo "storageSku=$(storageSku)"
+      echo "keyVaultOwnerUserId=$(keyVaultOwnerUserId)"
+      echo "adDomain=$(adDomain)"
+      echo "adTenantId=$(adTenantId)"
+      echo "adClientId=$(adClientId)"
+      echo "sqlServerNamePrefix=$(sqlServerNamePrefix)"
+      echo "sqlDatabaseName=$(sqlDatabaseName)"
+      echo "sqlAdminUser=$(sqlAdminUser)"
+      echo "sqlAdminPassword=$(sqlAdminPassword)"
+      echo "sqlSkuName=$(sqlSkuName)"
+      echo "sqlSkuTier=$(sqlSkuTier)"
+      echo "sqlSkuFamily=$(sqlSkuFamily)"
+      echo "adminLoginUserId=$(adminLoginUserId)"
+      echo "adminLoginUserSid=$(adminLoginUserSid)"
+      echo "adminLoginTenantId=$(adminLoginTenantId)"
+      echo "runDateTime=$(runDateTime)"
+      echo "runDateTimeZ=$(runDateTimeZ)"
+      echo "templateFile=$(templateFile)"
+      echo "compiledJsonFile=$(compiledJsonFile)"
+      echo "Resource Group Command:"
+      echo "  az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Application=$(appName) Environment=$(environmentNameUpper)"
+      echo "Bicep Deploy Sample Command:"
+      echo "  az deployment group create -n main-deploy-$(runDateTimeZ) --resource-group $(resourceGroupName) --template-file 'main.bicep' --parameters environmentCode $(environmentNameLower) location $(location) appName $(appName) storageSku $(storageSku) keyVaultOwnerUserId $(keyVaultOwnerUserId) databaseName $(databaseName) sqlSkuName $(sqlSkuName) sqlSkuTier $(sqlSkuTier) sqlSkuFamily $(sqlSkuFamily) adminLoginUserId $(adminLoginUserId) adminLoginUserSid $(adminLoginUserSid) adminLoginTenantId $(adminLoginTenantId) runDateTime $(runDateTime) appVersion $(appVersion) appDataSource $(appDataSource) appSwaggerEnabled $(appSwaggerEnabled) appTitle '$(appTitle)' appDescription '$(appDescription)' adDomain=$(adDomain) adTenantId=$(adTenantId) adClientId=$(adClientId) apiKey 'xxxxx' openAIApiKey 'xxxxx' openAIResourceName 'xxxxxx' dallEApiKey 'xxxxx'"
+    displayName: 'Display Variables'
+    continueOnError: true
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "Directory of Default Working Directory:"
+        tree $(System.DefaultWorkingDirectory)
+        dir $(System.DefaultWorkingDirectory) /s
+    displayName: 'Display Tree'
+    continueOnError: true
+
+  - task: AzureCLI@2
+    displayName: 'Create Resource Group'
+    inputs:
+      azureSubscription: $(subscriptionName)
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Application=$(appName) Environment=$(environmentNameUpper)
+
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: 'Publish Bicep Resources'
+    inputs:
+      csmFile: $(templateFile)
+      overrideParameters: >
+        -appName $(appName)
+        -environmentCode $(environmentNameLower)
+        -keyVaultOwnerUserId $(keyVaultOwnerUserId)
+        -location $(location) 
+        -runDateTime $(runDateTime)
+        -storageSku $(storageSku) 
+        -sqlServerNamePrefix $(sqlServerNamePrefix)
+        -sqlDatabaseName $(sqlDatabaseName)
+        -sqlAdminUser $(sqlAdminUser)
+        -sqlAdminPassword $(sqlAdminPassword)
+        -sqlSkuName $(sqlSkuName)
+        -sqlSkuTier $(sqlSkuTier)
+        -sqlSkuFamily $(sqlSkuFamily)
+        -adminLoginUserId $(adminLoginUserId)
+        -adminLoginUserSid $(adminLoginUserSid)
+        -adminLoginTenantId $(adminLoginTenantId)
+      deploymentScope: 'Resource Group'
+      azureResourceManagerConnection: '$(subscriptionName)'
+      action: 'Create Or Update Resource Group'
+      resourceGroupName: '$(resourceGroupName)'
+      location: '$(location)'
+      templateLocation: 'Linked artifact'
+      deploymentMode: 'Incremental'
+      deploymentOutputs: armDeployment
+
+      # -appVersion $(appVersion)
+      # -appTitle "$(appTitle)"
+      # -appDescription "$(appDescription)"
+
+  # - bash: |
+  #     var=`echo "$(armDeployment)" | \
+  #     sed -e 's/ //g' | \
+  #     sed -e 's/}/"\n}/g' | \
+  #     sed -e 's/{/{\n"/g' | \
+  #     sed -e 's/:/":"/g'  | \
+  #     sed -e 's/,/",\n"/g' | \
+  #     sed -e 's/"}/}/g' | \
+  #     sed -e 's/}"/}/g'  | \
+  #     sed -e 's/"{/{/g'  | \
+  #     sed -e 's/\[/\[\n"/g' | \
+  #     sed -e 's/]/"\n]/g' | \
+  #     sed -e 's/"\[/\[/g' | \
+  #     sed -e 's/]"/]/g'`
+  #     value1=`echo $var | jq -r .fqdnSqlServerName.value`
+  #     echo "##vso[task.setvariable variable=targetSqlServer]$value1"
+  #     value2=`echo $var | jq -r .sqlDatabaseName.value`
+  #     echo "##vso[task.setvariable variable=targetSqlDatabase]$value2"
+  #   displayName: 'Get Bicep Output'
+  #   continueOnError: true
+
+  # - bash: |
+  #     echo "targetSqlServer=$(targetSqlServer)"
+  #     echo "targetSqlDatabase=$(targetSqlDatabase)"
+  #     echo "dacpacDirectory=$(dacpacDirectory)"
+  #     echo "dacpacFileName=$(dacpacFileName)"
+  #     echo "DefaultWorkingDirectory=$(System.DefaultWorkingDirectory)"
+  #   displayName: 'Display Bicep Output'
+  #   continueOnError: true
+
+  # - task: AzurePowerShell@5
+  #   displayName: Get access token
+  #   inputs:
+  #     azureSubscription: '$(serviceConnectionName)'
+  #     ScriptType: 'InlineScript'
+  #     azurePowerShellVersion: LatestVersion
+  #     Inline: |
+  #       $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
+  #       $sqlToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $context.Tenant.Id.ToString(), $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, "https://database.windows.net").AccessToken
+  #       Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")
+
+  # - ${{ if and(ne(variables.dacpacDirectoryVar, ''), ne(variables.dacpacFileNameVar, '')) }}:
+  #   # https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
+  #   # https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
+  #   # https://erikej.github.io/sqlserver/2021/02/01/azure-sql-advanced-deployment-part4.html
+  #   - task: SqlAzureDacpacDeployment@1
+  #     displayName: Restore SQL Dacpac
+  #     inputs:
+  #       azureSubscription: '$(serviceConnectionName)'
+  #       AuthenticationType: 'connectionString'
+  #       ConnectionString: 'Data Source=$(targetSqlServer);Initial Catalog=$(targetSqlDatabase);Encrypt=true;Connect Timeout=60'
+  #       deployType: 'DacpacTask'
+  #       DeploymentAction: 'Publish'
+  #       DacpacFile: '$(System.DefaultWorkingDirectory)/$(dacpacDirectory)/$(dacpacFileName)'
+  #       AdditionalArguments: '/AccessToken:$(sqlToken)'
+  #       IpDetectionMethod: 'AutoDetect'
+
+  #   ##[error]*** Could not deploy package.
+  #   # Unable to connect to target server 'xxx.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
+  #   # Reason: An instance-specific error occurred while establishing a connection to SQL Server. Connection was denied since Deny Public Network Access is set to Yes 
+  #   # (https://docs.microsoft.com/azure/azure-sql/database/connectivity-settings#deny-public-network-access).
+  #   # To connect to this server, use the Private Endpoint from inside your virtual network (https://docs.microsoft.com/azure/sql-database/sql-database-private-endpoint-overview#how-to-set-up-private-link-for-azure-sql-database).
+  #   # The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-

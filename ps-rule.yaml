@@ -1,0 +1,78 @@
+# PSRule for Azure configuration file
+#   See: https://aka.ms/ps-rule/options
+#   See: https://aka.ms/ps-rule-azure/options
+
+# Exclude these rules for all files
+rule:
+  exclude:
+  - 'AZR-000007' # Azure.ACR.Name: Container registry names should meet naming requirements.
+  - 'AZR-000168' # Azure.ResourceGroup.Name: Resource Group names should meet naming requirements.
+  - 'AZR-000201' # Azure.Storage.Name: Storage Account names should meet naming requirements.
+
+  - 'AZR-000009' # Azure.ACR.ContentTrust. Use container images signed by a trusted image publisher.
+  - 'AZR-000071' # Azure.AppService.PlanInstanceCount: App Service Plan should use a minimum number of instances for failover.
+  - 'AZR-000072' # Azure.AppService.MinPlan: Use at least a Standard App Service Plan.
+  - 'AZR-000077' # Azure.AppService.AlwaysOn: Configure Always On for App Service apps.
+  - 'AZR-000078' # Azure.AppService.HTTP2: Use HTTP/2 instead of HTTP/1.x to improve protocol efficiency.
+  - 'AZR-000079' # Azure.AppService.WebProbe: Configure and enable instance health probes.
+  - 'AZR-000080' # Azure.AppService.WebProbePath: Configure a dedicated path for health probe requests.
+  - 'AZR-000119' # Azure.KeyVault.Logs: Ensure audit diagnostics logs are enabled to audit Key Vault access.
+  - 'AZR-000125' # Azure.KeyVault.PurgeProtect: Enable Purge Protection on Key Vaults (I want to delete them for demos!)
+  - 'AZR-000182' # Azure.SignalR.SLA: Use SKUs that include an SLA when configuring SignalR Services.
+  - 'AZR-000195' # Azure.Storage.UseReplication: Storage Accounts not using geo-replicated storage (GRS) may be at risk.
+
+# I'm not sure what the format needs to be, but these suggestions don't suppress anything... :(
+# # Suppression ignores rules for a specific Azure resource by name.
+# suppression:
+#   AZR-000119:
+#   - keyvault.bicep
+#   - keyvault2.bicep
+#   Azure.KeyVault.Logs:
+#   - keyvault.bicep
+#   - keyvault2.bicep
+
+# Configure binding for local rules.
+binding:
+  preferTargetInfo: true
+  targetType:
+  - type
+  - resourceType
+
+# Require minimum versions of modules.
+requires:
+  PSRule: '@pre >=2.4.0'
+  PSRule.Rules.Azure: '@pre >=1.19.2'
+
+# Use PSRule for Azure.
+include:
+  module:
+  - PSRule.Rules.Azure
+
+output:
+  culture:
+  - 'en-US'
+
+input:
+  pathIgnore:
+  # Exclude main bicep examples as they just reference existing files via modules.
+  - 'main.bicep-Examples/**/*.bicep'
+  - 'Container-Registry/*.bicep'
+  # Exclude specific configuration files
+  - 'bicep.config'
+  # Exclude files with these extensions
+  - '*.md'
+  - '*.yml'
+  - '*.yaml'
+  - '*.ps1'
+  # Ignore other files in the repository.
+  - '.vscode/'
+  - '.github/'
+  - '.gitignore'
+  # Exclude modules but not tests.
+  - 'bicep/modules/**/*.bicep'
+  - '!bicep/modules/**/*.tests.bicep'
+
+configuration:
+  AZURE_PARAMETER_FILE_EXPANSION: true
+  AZURE_BICEP_FILE_EXPANSION: true
+  AZURE_BICEP_FILE_EXPANSION_TIMEOUT: 10

@@ -1,0 +1,68 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline to build and deploy Azure Resources and Database
+# See readme file for info about variable group "SQLDeployDemo"
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: windows-latest # dacpac restore only runs on Windows...
+
+# ------------------------------------------------------------------------------------------------------------------------
+trigger:
+  # since this repo has both AzDO and GHA pipelines, nothing is run automatically...
+  - none
+  # batch: true
+  # branches:
+  #   include:
+  #     - main
+  #   exclude:
+  #     - '**/*.md'
+  # paths:
+  #   include:
+  #     - 'src/sql.database/*'
+
+# ----------------------------------------------------------------------------------------------------
+parameters:
+  - name: deployMultiStage
+    displayName: Multi-Stage Deploy
+    type: boolean
+    default: false
+  - name: runDevSecOpsScan
+    displayName: Run MS DevSecOps Scan
+    type: boolean
+    default: false
+  # - name: runGHASScan
+  #   displayName: Run GHAS Scan
+  #   type: boolean
+  #   default: false
+  # - name: runPsRuleScan
+  #   displayName: Run PSRule Bicep Scan
+  #   type: boolean
+  #   default: false
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - group: SQLDeployDemo
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
+  - template: pipes/infra-and-schema-pipe.yml
+    parameters:
+      environments: ['DEMO']
+      appFolderName: 'src/sql.database'
+      appSolutionName: 'sql.database'
+      appProjectName: 'sql.database'
+      runDevSecOpsScan: ${{ parameters.runDevSecOpsScan }}
+      #runGHASScan: ${{ parameters.runGHASScan }}
+      #runPsRuleScan: ${{ parameters.runPsRuleScan }}
+
+- ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
+  - template: pipes/infra-and-schema-pipe.yml
+    parameters:
+      environments: ['DEMO','QA']
+      appFolderName: 'src/sql.database'
+      appSolutionName: 'sql.database'
+      appProjectName: 'sql.database'
+      runDevSecOpsScan: ${{ parameters.runDevSecOpsScan }}
+      #runGHASScan: ${{ parameters.runGHASScan }}
+      #runPsRuleScan: ${{ parameters.runPsRuleScan }}

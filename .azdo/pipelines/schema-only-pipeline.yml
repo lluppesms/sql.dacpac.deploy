@@ -1,0 +1,53 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline to build and deploy Database Objects Only to existing resources
+# See readme file for info about variable group "SQLDeployDemo"
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: windows-latest # dacpac restore only runs on Windows...
+
+# ----------------------------------------------------------------------------------------------------
+trigger:
+  # since this repo has both AzDO and GHA pipelines, nothing is run automatically...
+  - none
+  # batch: true
+  # branches:
+  #   include:
+  #     - main
+  # paths:
+  #   include:
+  #     - 'src/sql.database/*'
+  #   exclude: 
+  #     - '**/*.yml'
+  #     - '**/*.yaml'
+  #     - '**/*.bicep'
+  #     - '**/*.md'
+
+# ----------------------------------------------------------------------------------------------------
+parameters:
+  - name: deployDevOnly
+    displayName: Deploy Only to Dev
+    type: boolean
+    default: true
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - group: SQLDeployDemo
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- ${{ if eq(lower(parameters.deployDevOnly), 'true') }}:
+  - template: pipes/schema-only-pipe.yml
+    parameters:
+      environments: ['DEMO']
+      appFolderName: 'src/sql.database'
+      appSolutionName: 'sql.database'
+      appProjectName: 'sql.database'
+
+- ${{ if eq(lower(parameters.deployDevOnly), 'false') }}:
+  - template: pipes/schema-only-pipe.yml
+    parameters:
+      environments: ['DEMO','QA','PROD']
+      appFolderName: 'src/sql.database'
+      appSolutionName: 'sql.database'
+      appProjectName: 'sql.database'
