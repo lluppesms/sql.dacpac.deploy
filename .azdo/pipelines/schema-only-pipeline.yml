@@ -47,7 +47,7 @@ stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/schema-only-pipe.yml
     parameters:
-      environments: ['DEMO','QA','PROD']
+      environments: ['DEMO','QA']
       appFolderName: 'src/sql.database'
       appSolutionName: 'sql.database'
       appProjectName: 'sql.database'
