@@ -25,10 +25,10 @@ trigger:
 
 # ----------------------------------------------------------------------------------------------------
 parameters:
-  - name: deployDevOnly
-    displayName: Deploy Only to Dev
+  - name: deployMultiStage
+    displayName: Multi-Stage Deploy
     type: boolean
-    default: true
+    default: false
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -36,7 +36,7 @@ variables:
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if eq(lower(parameters.deployDevOnly), 'true') }}:
+- ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO']
@@ -44,7 +44,7 @@ stages:
       appSolutionName: 'sql.database'
       appProjectName: 'sql.database'
 
-- ${{ if eq(lower(parameters.deployDevOnly), 'false') }}:
+- ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO','QA','PROD']
