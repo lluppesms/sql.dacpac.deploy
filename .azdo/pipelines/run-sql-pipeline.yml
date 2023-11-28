@@ -40,12 +40,12 @@ stages:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO']
-      sqlFolderName: 'src\sql.database\sql.database\dbo\'
-      sqlFileName: 'Post-Deployment.sql'
+      sqlFolderName: 'src\sql.database\sql.database\Patch\'
+      sqlFileName: 'Patch-20231128.sql'
 
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO','QA']
-      sqlFolderName: 'src\sql.database\sql.database\dbo\'
-      sqlFileName: 'Post-Deployment.sql'
+      sqlFolderName: 'src\sql.database\sql.database\Patch\'
+      sqlFileName: 'Patch-20231128.sql'
