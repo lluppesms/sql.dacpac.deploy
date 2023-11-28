@@ -1,6 +1,4 @@
-﻿
--- CREATE PROC sp_QueryJokes (
-CREATE PROC sp_QueryJokes (
+﻿CREATE PROC [dbo].[sp_QueryJokes] (
   @category as varchar(255) = NULL,
   @searchTxt as varchar(255) = NULL
 ) AS

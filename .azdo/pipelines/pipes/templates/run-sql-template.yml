@@ -76,6 +76,9 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: |
+        echo "SQL File: $(sqlFullFileName)"
+        dir $(sqlFullFileName)
+      
         echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
         dir $(System.DefaultWorkingDirectory) /s
 
