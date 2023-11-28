@@ -162,7 +162,7 @@ jobs:
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Job Input Artifacts'
     inputs:
-      PathtoPublish: 'sqlFullFolderName'
+      PathtoPublish: '$(sqlFullFolderName)'
       ArtifactName: 'Input'
       
   - task: PublishBuildArtifacts@1
