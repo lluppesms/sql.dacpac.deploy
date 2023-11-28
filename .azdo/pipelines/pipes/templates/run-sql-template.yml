@@ -62,7 +62,7 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)
         md Output
         cd Output
-        echo "This is where the SQL output would go if it was working right..." > Example-Output.txt
+        echo "This is where the SQL output would go if it was working right..." > Example-Output-1.txt
         cd ..
       errorActionPreference: 'continue'
       failOnStderr: false
@@ -123,7 +123,12 @@ jobs:
       scriptType: inlinescript
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
+          $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+          echo $cmdOutput > $(logFullFileName)
+          echo "Another test..." > $(Build.ArtifactStagingDirectory)\Example-Output-2.txt
+
+    # Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" 2>&1 > $(logFullFileName) 
+    # (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
 
   # ------------------------------------------------------------------------------------------------------------------------
   ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
