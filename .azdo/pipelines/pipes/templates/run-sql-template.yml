@@ -35,6 +35,8 @@ jobs:
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
     - name: testFileName2
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
+    - name: testFileName3
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-3.txt
 
   steps:
   - bash: |
@@ -127,12 +129,13 @@ jobs:
       scriptType: inlinescript
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          $cmdOutput = & (cmd /c Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 2>&1 | Out-String
+          $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
           echo $cmdOutput
           echo $(logFullFileName)
           echo $cmdOutput > output.log
           echo $cmdOutput > $(logFullFileName)
           echo "Another file test..." > $(testFileName2)
+          Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
 
     # try a & in front of command    > $cmdOutput = & Invoke-SqlCmd...  2>1 | Out-String
     # try this:   $cmdOutput = (cmd /c Invoke-SqlCmd... 2`>`&1)
@@ -150,6 +153,17 @@ jobs:
   #     ScriptPath: '$(Build.SourcesDirectory)\scripts\RemoveAzureFirewallRule.ps1'
   #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
   #     azurePowerShellVersion: LatestVersion
+
+  - task: PowerShell@2
+    displayName: Create Output File 3
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd $(Build.ArtifactStagingDirectory)
+        cd Output
+        echo $cmdOutput > $(testFileName3)
+      errorActionPreference: 'continue'
+      failOnStderr: false
 
   - task: CmdLine@2
     inputs:
