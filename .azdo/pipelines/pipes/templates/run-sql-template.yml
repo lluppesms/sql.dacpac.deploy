@@ -2,6 +2,9 @@
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
 # ------------------------------------------------------------------------------------------------------------------------
+# WARNING: This seems to run successfully, but I can't verify that it actually works!
+# I've tried many ways of capturing the output of the Invoke-SqlCmd command, but it doesn't seem to work.
+# ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
   default:  'DEMO'
@@ -128,20 +131,17 @@ jobs:
       azurePowerShellVersion: 'LatestVersion'
       scriptType: inlinescript
       script: |
-          $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
-          Write-Verbose "$cmdOutput" -Verbose
-          echo $cmdOutput
-          echo $(logFullFileName)
-          echo $cmdOutput > output.log
-          echo $cmdOutput > $(logFullFileName)
-          echo "Another file test..." > $(testFileName2)
-          Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
+        $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+        Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
 
-    # try a & in front of command    > $cmdOutput = & Invoke-SqlCmd...  2>1 | Out-String
-    # try this:   $cmdOutput = (cmd /c Invoke-SqlCmd... 2`>`&1)
-    # Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" 2>&1 > $(logFullFileName) 
-    # (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
+    # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+    # Write-Verbose "$cmdOutput" -Verbose
+    # echo $cmdOutput
+    # echo $(logFullFileName)
+    # echo $cmdOutput > output.log
+    # echo $cmdOutput > $(logFullFileName)
+    # echo "Another file test..." > $(testFileName2)
+    # Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
 
   # ------------------------------------------------------------------------------------------------------------------------
   ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
@@ -155,16 +155,17 @@ jobs:
   #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
   #     azurePowerShellVersion: LatestVersion
 
-  - task: PowerShell@2
-    displayName: Create Output File 3
-    inputs:
-      targetType: 'inline'
-      script: |
-        cd $(Build.ArtifactStagingDirectory)
-        cd Output
-        echo $cmdOutput > $(testFileName3)
-      errorActionPreference: 'continue'
-      failOnStderr: false
+  # - task: PowerShell@2
+  #   displayName: Create Output File 3
+  #   inputs:
+  #     targetType: 'inline'
+  #     script: |
+  #       cd $(Build.ArtifactStagingDirectory)
+  #       cd Output
+  #       echo $cmdOutput > $(testFileName3)
+  #       echo $cmdOutput
+  #     errorActionPreference: 'continue'
+  #     failOnStderr: false
 
   - task: CmdLine@2
     inputs:
@@ -176,19 +177,6 @@ jobs:
         dir D:\a\_temp\ /s
     displayName: 'Display Post Run Files'
     continueOnError: true
-
-  # - task: PowerShell@2
-  #   displayName: Copy Output Folder
-  #   inputs:
-  #     targetType: 'inline'
-  #     script: |
-  #       cd $(Build.ArtifactStagingDirectory)/packages
-  #       cd Deploy
-  #       md Linux
-  #       cd ..
-  #       move $(folderName)/$(exeName) $(Build.ArtifactStagingDirectory)/packages/Deploy/Linux/
-  #     errorActionPreference: 'continue'
-  #     failOnStderr: false
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Output Artifacts'
