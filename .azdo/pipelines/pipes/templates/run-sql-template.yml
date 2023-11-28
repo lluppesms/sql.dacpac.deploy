@@ -44,13 +44,21 @@ jobs:
       resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
       echo "resourceGroupName=$resourceGroupName"
       echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
-      cd $(Build.ArtifactStagingDirectory)
-      md Output
-      cd Output
-      echo "Dummy file to create one output..." > $(testFileName1)
-      cd ..
     displayName: 'Create Variables'
     continueOnError: true
+
+  - task: PowerShell@2
+    displayName: Make Output Folder
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd $(Build.ArtifactStagingDirectory)
+        md Output
+        cd Output
+        echo "Dummy file to create one output..." > $(testFileName1)
+        cd ..
+      errorActionPreference: 'continue'
+      failOnStderr: false
 
   - bash: |
       echo "resourceGroupName=$(resourceGroupName)"
@@ -61,8 +69,7 @@ jobs:
       echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
       echo "logFullFileName=$(logFullFileName)"
-
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' [send output to] $(logFullFileName)" 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'" 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
