@@ -2,8 +2,8 @@
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
 # ------------------------------------------------------------------------------------------------------------------------
-# WARNING: This seems to run successfully, but I can't verify that it actually works!
-# I've tried many ways of capturing the output of the Invoke-SqlCmd command, but it doesn't seem to work.
+# NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get that to work.
+# Therefore, I have no good way in the pipeline to know if the Invoke succeeded or failed.
 # ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
@@ -30,6 +30,8 @@ jobs:
       value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
+    - name: sqlFullFolderName
+      value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}
     - name: sqlFullFileName
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
     - name: logFullFileName
@@ -55,7 +57,7 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)
         md Output
         cd Output
-        echo "Dummy file to create one output..." > $(testFileName1)
+        echo "Dummy file to create one output to publish..." > $(testFileName1)
         cd ..
       errorActionPreference: 'continue'
       failOnStderr: false
@@ -77,14 +79,9 @@ jobs:
     inputs:
       script: |
         echo "SQL File: $(sqlFullFileName)"
-        dir $(sqlFullFileName)
-      
-        echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
-        dir $(System.DefaultWorkingDirectory) /s
-
-        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
-        dir $(Build.ArtifactStagingDirectory) /s
-    displayName: 'Display Files'
+        echo "Directory of $(sqlFullFolderName)"
+        dir $(sqlFullFolderName) /s
+    displayName: 'Display SQL Files'
     continueOnError: true
 
   # ------------------------------------------------------------------------------------------------------------------------
@@ -134,14 +131,10 @@ jobs:
         $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
         Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
     
-    # Some things I've tried...
+    # Some things I've tried to get this output...
     # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
     # Write-Verbose "$cmdOutput" -Verbose
-    # echo $cmdOutput
-    # echo $(logFullFileName)
-    # echo $cmdOutput > output.log
     # echo $cmdOutput > $(logFullFileName)
-    # echo "Another file test..." > $(testFileName2)
     # Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
 
   # ------------------------------------------------------------------------------------------------------------------------
