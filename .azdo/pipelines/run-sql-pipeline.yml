@@ -1,0 +1,51 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline to run one sql file against a database
+# See readme file for info about variable group "SQLDeployDemo"
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: windows-latest # dacpac restore only runs on Windows...
+
+# ----------------------------------------------------------------------------------------------------
+trigger:
+  # since this repo has both AzDO and GHA pipelines, nothing is run automatically...
+  - none
+  # batch: true
+  # branches:
+  #   include:
+  #     - main
+  # paths:
+  #   include:
+  #     - 'src/sql.database/*'
+  #   exclude: 
+  #     - '**/*.yml'
+  #     - '**/*.yaml'
+  #     - '**/*.bicep'
+  #     - '**/*.md'
+
+# ----------------------------------------------------------------------------------------------------
+parameters:
+  - name: deployMultiStage
+    displayName: Multi-Stage Deploy
+    type: boolean
+    default: false
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - group: SQLDeployDemo
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
+  - template: pipes/run-sql-pipe.yml
+    parameters:
+      environments: ['DEMO']
+      sqlFolderName: 'src/sql.database/dbo/'
+      sqlFileName: 'Post-Deployment.sql'
+
+- ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
+  - template: pipes/run-sql-pipe.yml
+    parameters:
+      environments: ['DEMO','QA']
+      sqlFolderName: 'src/sql.database/dbo/'
+      sqlFileName: 'Post-Deployment.sql'

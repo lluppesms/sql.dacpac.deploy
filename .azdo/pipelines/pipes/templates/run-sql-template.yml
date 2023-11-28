@@ -1,0 +1,114 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline template to run one SQL Script against an existing database
+# See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
+# ------------------------------------------------------------------------------------------------------------------------
+parameters: 
+- name: environmentName
+  default:  'DEMO'
+- name: sqlFolderName
+  default: ''
+- name: sqlFileName
+  default: ''
+
+# ------------------------------------------------------------------------------------------------------------------------
+jobs:
+- deployment: Deploy${{ parameters.environmentName }}SQL
+  displayName: Initialize ${{ parameters.environmentName }} Deploy SQL
+  environment: ${{ parameters.environmentName }}
+
+- job: DeployDB${{ parameters.environmentName }}SQL
+  displayName: Deploy ${{ parameters.environmentName }} SQL
+  variables:
+    - name: environmentNameUpper
+      value: ${{ upper(parameters.environmentName) }}
+    - name: environmentNameLower
+      value: ${{ lower(parameters.environmentName) }}
+    - name: sqlServerName
+      value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
+    - name: fqdnServerName
+      value: $(sqlServerName).database.windows.net
+    - name: sqlFullFileName
+      value: ${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+
+  steps:
+  - bash: |
+      resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
+      echo "resourceGroupName=$resourceGroupName"
+      echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+
+      echo "resourceGroupName=$(resourceGroupName)"
+      echo "serviceConnectionName=$(serviceConnectionName)"
+      echo "subscriptionName=$(subscriptionName)"
+      echo "sqlServerName=$(sqlServerName)"
+      echo "fqdnServerName="$(fqdnServerName)"
+      echo "sqlDatabaseName="$(sqlDatabaseName)"
+      echo "sqlFullFileName=$(sqlFullFileName)"
+    displayName: 'Set up and display variables'
+    continueOnError: true
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "Directory of Default Working Directory:"
+        dir $(System.DefaultWorkingDirectory) /s
+    displayName: 'Display Files'
+    continueOnError: true
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
+  # ------------------------------------------------------------------------------------------------------------------------
+  # # ERROR: this is failing because I'm getting a subscription does not exist error...!
+  # - task: AzurePowerShell@5
+  #   displayName: 'Add SQL Firewall Exception'
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     ScriptType: filePath
+  #     ScriptPath: '$(Build.SourcesDirectory)\scripts\SetAzureFirewallRule.ps1'
+  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName) -SubscriptionName "$(subscriptionName)"'
+  #     azurePowerShellVersion: LatestVersion
+  #   continueOnError: true
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  # If you want to add your own IP to the database for testing...
+  # ------------------------------------------------------------------------------------------------------------------------
+  # - task: AzureCLI@2
+  #   displayName: 'Personal Firewall Rule Update (untested)'
+  #   inputs:
+  #     azureSubscription: ${{ variables.serviceEndpointName }}
+  #     scriptType: 'pscore'
+  #     scriptLocation: 'inlineScript'
+  #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group $(resourceGroupName) --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  # One way of running the SqlCmd utility
+  # ------------------------------------------------------------------------------------------------------------------------
+  # - task: CmdLine@2
+  #   displayName: Run Sqlcmd
+  #   inputs:
+  #     filename: Sqlcmd
+  #     arguments: '-S $(fqdnServerName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -d $(sqlDatabaseName) -i $(sqlFullFileName)'
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  # Another way of running the SqlCmd utility
+  # ------------------------------------------------------------------------------------------------------------------------
+  - task: AzurePowerShell@5
+    displayName: Run Invoke-SqlCmd
+    inputs:
+      azureSubscription: $(serviceConnectionName)
+      azurePowerShellVersion: 'LatestVersion'
+      scriptType: inlinescript
+      script: |
+          $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)"
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
+  # ------------------------------------------------------------------------------------------------------------------------
+  # - task: AzurePowerShell@5
+  #   displayName: 'Remove SQL Firewall Exception'
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     ScriptType: filePath
+  #     ScriptPath: '$(Build.SourcesDirectory)\scripts\RemoveAzureFirewallRule.ps1'
+  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
+  #     azurePowerShellVersion: LatestVersion
