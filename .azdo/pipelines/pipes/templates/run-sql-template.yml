@@ -140,9 +140,6 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: |
-        echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
-        dir $(System.DefaultWorkingDirectory) /s
-
         echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
         dir $(Build.ArtifactStagingDirectory) /s
     displayName: 'Display Post Run Files'
