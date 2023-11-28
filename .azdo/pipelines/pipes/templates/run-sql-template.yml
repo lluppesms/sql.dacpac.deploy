@@ -130,6 +130,7 @@ jobs:
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
           $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+          Write-Verbose "$cmdOutput" -Verbose
           echo $cmdOutput
           echo $(logFullFileName)
           echo $cmdOutput > output.log
