@@ -30,7 +30,7 @@ jobs:
     - name: sqlFullFileName
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
     - name: logFullFileName
-      value: $(build.artifactstagingdirectory)\Output\{{ parameters.sqlFileName }}.log
+      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
 
   steps:
   - bash: |
@@ -53,11 +53,27 @@ jobs:
     displayName: 'Display variables and CMD'
     continueOnError: true
 
+  - task: PowerShell@2
+    displayName: Make Output Folder
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd $(Build.ArtifactStagingDirectory)
+        md Output
+        cd Output
+        echo "test" > test.txt
+        cd ..
+      errorActionPreference: 'continue'
+      failOnStderr: false
+
   - task: CmdLine@2
     inputs:
       script: |
-        echo "Directory of Default Working Directory:"
+        echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
         dir $(System.DefaultWorkingDirectory) /s
+
+        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
+        dir $(Build.ArtifactStagingDirectory) /s
     displayName: 'Display Files'
     continueOnError: true
 
@@ -126,8 +142,8 @@ jobs:
         echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
         dir $(System.DefaultWorkingDirectory) /s
 
-        echo "Directory of Staging Directory: $(build.artifactstagingdirectory)"
-        dir $(build.artifactstagingdirectory) /s
+        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
+        dir $(Build.ArtifactStagingDirectory) /s
     displayName: 'Display Post Run Files'
     continueOnError: true
 
@@ -136,11 +152,11 @@ jobs:
   #   inputs:
   #     targetType: 'inline'
   #     script: |
-  #       cd $(build.artifactstagingdirectory)/packages
+  #       cd $(Build.ArtifactStagingDirectory)/packages
   #       cd Deploy
   #       md Linux
   #       cd ..
-  #       move $(folderName)/$(exeName) $(build.artifactstagingdirectory)/packages/Deploy/Linux/
+  #       move $(folderName)/$(exeName) $(Build.ArtifactStagingDirectory)/packages/Deploy/Linux/
   #     errorActionPreference: 'continue'
   #     failOnStderr: false
 
