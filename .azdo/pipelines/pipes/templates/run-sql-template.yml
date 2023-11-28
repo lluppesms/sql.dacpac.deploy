@@ -32,9 +32,9 @@ jobs:
     - name: logFullFileName
       value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
     - name: testFileName1
-      value: $(Build.ArtifactStagingDirectory)\Example-Output-1.txt
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
     - name: testFileName2
-      value: $(Build.ArtifactStagingDirectory)\Example-Output-2.txt
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
 
   steps:
   - bash: |
@@ -127,13 +127,15 @@ jobs:
       scriptType: inlinescript
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+          $cmdOutput = & (cmd /c Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 2>&1 | Out-String
           echo $cmdOutput
           echo $(logFullFileName)
           echo $cmdOutput > output.log
           echo $cmdOutput > $(logFullFileName)
           echo "Another file test..." > $(testFileName2)
 
+    # try a & in front of command    > $cmdOutput = & Invoke-SqlCmd...  2>1 | Out-String
+    # try this:   $cmdOutput = (cmd /c Invoke-SqlCmd... 2`>`&1)
     # Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" 2>&1 > $(logFullFileName) 
     # (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
 
