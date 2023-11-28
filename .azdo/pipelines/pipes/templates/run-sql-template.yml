@@ -31,6 +31,10 @@ jobs:
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
     - name: logFullFileName
       value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
+    - name: testFileName1
+      value: $(Build.ArtifactStagingDirectory)\Example-Output-1.txt
+    - name: testFileName2
+      value: $(Build.ArtifactStagingDirectory)\Example-Output-2.txt
 
   steps:
   - bash: |
@@ -62,7 +66,7 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)
         md Output
         cd Output
-        echo "This is where the SQL output would go if it was working right..." > Example-Output-1.txt
+        echo "This is where the SQL output would go if it was working right..." > $(testFileName1)
         cd ..
       errorActionPreference: 'continue'
       failOnStderr: false
@@ -124,8 +128,11 @@ jobs:
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
           $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+          echo $cmdOutput
+          echo $(logFullFileName)
+          echo $cmdOutput > output.log
           echo $cmdOutput > $(logFullFileName)
-          echo "Another test..." > $(Build.ArtifactStagingDirectory)\Example-Output-2.txt
+          echo "Another file test..." > $(testFileName2)
 
     # Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" 2>&1 > $(logFullFileName) 
     # (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
@@ -147,6 +154,9 @@ jobs:
       script: |
         echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
         dir $(Build.ArtifactStagingDirectory) /s
+
+        echo "Directory of Temp Directory: D:\a\_temp\"
+        dir D:\a\_temp\ /s
     displayName: 'Display Post Run Files'
     continueOnError: true
 
