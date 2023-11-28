@@ -2,6 +2,9 @@
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
 # ------------------------------------------------------------------------------------------------------------------------
+# WARNING: This seems to run successfully, but I can't verify that it actually works!
+# I've tried many ways of capturing the output of the Invoke-SqlCmd command, but it doesn't seem to work.
+# ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
   default:  'DEMO'
@@ -28,7 +31,13 @@ jobs:
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
     - name: sqlFullFileName
-      value: ${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+      value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+    - name: logFullFileName
+      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
+    - name: testFileName1
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
+    - name: testFileName2
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
 
   steps:
   - bash: |
@@ -38,6 +47,19 @@ jobs:
     displayName: 'Create Variables'
     continueOnError: true
 
+  - task: PowerShell@2
+    displayName: Make Output Folder
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd $(Build.ArtifactStagingDirectory)
+        md Output
+        cd Output
+        echo "Dummy file to create one output..." > $(testFileName1)
+        cd ..
+      errorActionPreference: 'continue'
+      failOnStderr: false
+
   - bash: |
       echo "resourceGroupName=$(resourceGroupName)"
       echo "serviceConnectionName=$(serviceConnectionName)"
@@ -46,16 +68,19 @@ jobs:
       echo "fqdnServerName=$(fqdnServerName)"
       echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
-
-      echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'"
+      echo "logFullFileName=$(logFullFileName)"
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'" 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
   - task: CmdLine@2
     inputs:
       script: |
-        echo "Directory of Default Working Directory:"
+        echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
         dir $(System.DefaultWorkingDirectory) /s
+
+        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
+        dir $(Build.ArtifactStagingDirectory) /s
     displayName: 'Display Files'
     continueOnError: true
 
@@ -85,7 +110,7 @@ jobs:
   #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group $(resourceGroupName) --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
 
   # ------------------------------------------------------------------------------------------------------------------------
-  # One way of running the SqlCmd utility
+  # Run SqlCmd utility with userid/password
   # ------------------------------------------------------------------------------------------------------------------------
   # - task: CmdLine@2
   #   displayName: Run Sqlcmd
@@ -94,7 +119,7 @@ jobs:
   #     arguments: '-S $(fqdnServerName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -d $(sqlDatabaseName) -i $(sqlFullFileName)'
 
   # ------------------------------------------------------------------------------------------------------------------------
-  # Another way of running the SqlCmd utility
+  # Run SqlCmd utility with access token
   # ------------------------------------------------------------------------------------------------------------------------
   - task: AzurePowerShell@5
     displayName: Run Invoke-SqlCmd
@@ -103,8 +128,18 @@ jobs:
       azurePowerShellVersion: 'LatestVersion'
       scriptType: inlinescript
       script: |
-          $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)"
+        $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+        Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
+    
+    # Some things I've tried...
+    # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+    # Write-Verbose "$cmdOutput" -Verbose
+    # echo $cmdOutput
+    # echo $(logFullFileName)
+    # echo $cmdOutput > output.log
+    # echo $cmdOutput > $(logFullFileName)
+    # echo "Another file test..." > $(testFileName2)
+    # Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
 
   # ------------------------------------------------------------------------------------------------------------------------
   ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
@@ -117,3 +152,19 @@ jobs:
   #     ScriptPath: '$(Build.SourcesDirectory)\scripts\RemoveAzureFirewallRule.ps1'
   #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
   #     azurePowerShellVersion: LatestVersion
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
+        dir $(Build.ArtifactStagingDirectory) /s
+        echo "Directory of Temp Directory: D:\a\_temp\"
+        dir D:\a\_temp\ /s
+    displayName: 'List Output Files'
+    continueOnError: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Output Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Output'
+      ArtifactName: 'Output'

@@ -7,6 +7,7 @@ Typically, you would want to set up either Option (a), or Option (b) AND Option 
 - [**infra-and-schema-pipeline.yml:**](infra-and-schema-pipeline.yml) Deploys the main.bicep template, builds the database DACPAC, and then deploys the data structure to the Azure SQL Database
 - [**infra-only-pipeline.yml:**](infra-only-pipeline.yml) Deploys the main.bicep template and does nothing else
 - [**schema-only-pipeline.yml:**](schema-only-pipeline.yml) Builds the database DACPAC and then deploys the data structure to the Azure SQL Database
+- [**run-sql-pipeline.yml:**](run-sql-pipeline.yml) Runs a specified SQL file against a deployed database
 
 ## Warnings
 
