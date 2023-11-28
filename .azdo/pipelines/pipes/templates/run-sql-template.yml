@@ -48,8 +48,9 @@ jobs:
       echo "fqdnServerName=$(fqdnServerName)"
       echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
+      echo "logFullFileName=$(logFullFileName)"
 
-      echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' * $(logFullFileName) " 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' [send output to] $(logFullFileName)" 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
@@ -61,7 +62,7 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)
         md Output
         cd Output
-        echo "test" > test.txt
+        echo "This is where the SQL output would go if it was working right..." > Example-Output.txt
         cd ..
       errorActionPreference: 'continue'
       failOnStderr: false
@@ -122,7 +123,7 @@ jobs:
       scriptType: inlinescript
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" > $(logFullFileName) 2>&1
+          (Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose) 4>&1 > $(logFullFileName) 
 
   # ------------------------------------------------------------------------------------------------------------------------
   ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
@@ -164,3 +165,4 @@ jobs:
     displayName: 'Publish Output Artifacts'
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/Output'
+      ArtifactName: 'Output'
