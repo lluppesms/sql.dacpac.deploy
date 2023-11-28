@@ -44,7 +44,7 @@ jobs:
       echo "subscriptionName=$(subscriptionName)"
       echo "sqlServerName=$(sqlServerName)"
       echo "fqdnServerName=$(fqdnServerName)"
-      echo "sqlDatabaseName="$(sqlDatabaseName)"
+      echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
 
       echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'"
