@@ -28,7 +28,9 @@ jobs:
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
     - name: sqlFullFileName
-      value: ${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+      value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+    - name: logFullFileName
+      value: $(build.artifactstagingdirectory)\Output\{{ parameters.sqlFileName }}.log
 
   steps:
   - bash: |
@@ -47,7 +49,7 @@ jobs:
       echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
 
-      echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'"
+      echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' * $(logFullFileName) " 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
@@ -104,7 +106,7 @@ jobs:
       scriptType: inlinescript
       script: |
           $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)"
+          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" > $(logFullFileName) 2>&1
 
   # ------------------------------------------------------------------------------------------------------------------------
   ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
@@ -117,3 +119,32 @@ jobs:
   #     ScriptPath: '$(Build.SourcesDirectory)\scripts\RemoveAzureFirewallRule.ps1'
   #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
   #     azurePowerShellVersion: LatestVersion
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "Directory of Default Working Directory: $(System.DefaultWorkingDirectory)"
+        dir $(System.DefaultWorkingDirectory) /s
+
+        echo "Directory of Staging Directory: $(build.artifactstagingdirectory)"
+        dir $(build.artifactstagingdirectory) /s
+    displayName: 'Display Post Run Files'
+    continueOnError: true
+
+  # - task: PowerShell@2
+  #   displayName: Copy Output Folder
+  #   inputs:
+  #     targetType: 'inline'
+  #     script: |
+  #       cd $(build.artifactstagingdirectory)/packages
+  #       cd Deploy
+  #       md Linux
+  #       cd ..
+  #       move $(folderName)/$(exeName) $(build.artifactstagingdirectory)/packages/Deploy/Linux/
+  #     errorActionPreference: 'continue'
+  #     failOnStderr: false
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Output Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Output'

@@ -66,4 +66,8 @@ jobs:
       SqlUsername: '$(sqlAdminUser)'
       SqlPassword: '$(sqlAdminPassword)'
       DeleteFirewallRule: false
-      
+      # If you want to drop tables not in the source you have to specify the parameter DropObjectsNotInSource=true
+      # See: https://learn.microsoft.com/en-us/answers/questions/811899/sqlpackage-does-not-delete-the-tables-from-target
+      # See also: https://dev.to/dealeron/dropping-objects-with-ssdt-33g2
+      # NOTE: This doesn't work right...!   AdditionalArguments: DropObjectsNotInSource=true
+       #AdditionalArguments: # string. Optional. Use when TaskNameSelector = DacpacTask || DeploymentAction = Extract || DeploymentAction = Export || DeploymentAction = Import || DeploymentAction = Script || DeploymentAction = DeployReport || DeploymentAction = DriftReport. Additional SqlPackage.exe Arguments. 
