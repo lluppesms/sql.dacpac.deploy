@@ -160,7 +160,13 @@ jobs:
     continueOnError: true
 
   - task: PublishBuildArtifacts@1
+    displayName: 'Publish Job Input Artifacts'
+    inputs:
+      PathtoPublish: 'sqlFullFolderName'
+      ArtifactName: 'Input'
+      
+  - task: PublishBuildArtifacts@1
     displayName: 'Publish Output Artifacts'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Output'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)\Output'
       ArtifactName: 'Output'
