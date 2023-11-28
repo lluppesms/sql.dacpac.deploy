@@ -35,15 +35,20 @@ jobs:
       resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
       echo "resourceGroupName=$resourceGroupName"
       echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+    displayName: 'Create Variables'
+    continueOnError: true
 
+  - bash: |
       echo "resourceGroupName=$(resourceGroupName)"
       echo "serviceConnectionName=$(serviceConnectionName)"
       echo "subscriptionName=$(subscriptionName)"
       echo "sqlServerName=$(sqlServerName)"
-      echo "fqdnServerName="$(fqdnServerName)"
+      echo "fqdnServerName=$(fqdnServerName)"
       echo "sqlDatabaseName="$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
-    displayName: 'Set up and display variables'
+
+      echo " CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'"
+    displayName: 'Display variables and CMD'
     continueOnError: true
 
   - task: CmdLine@2
