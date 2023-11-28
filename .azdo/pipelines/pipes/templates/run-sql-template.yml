@@ -38,14 +38,17 @@ jobs:
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
     - name: testFileName2
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
-    - name: testFileName3
-      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-3.txt
 
   steps:
   - bash: |
       resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
       echo "resourceGroupName=$resourceGroupName"
       echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+      cd $(Build.ArtifactStagingDirectory)
+      md Output
+      cd Output
+      echo "Dummy file to create one output..." > $(testFileName1)
+      cd ..
     displayName: 'Create Variables'
     continueOnError: true
 
@@ -62,19 +65,6 @@ jobs:
       echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' [send output to] $(logFullFileName)" 
     displayName: 'Display variables and CMD'
     continueOnError: true
-
-  - task: PowerShell@2
-    displayName: Make Output Folder
-    inputs:
-      targetType: 'inline'
-      script: |
-        cd $(Build.ArtifactStagingDirectory)
-        md Output
-        cd Output
-        echo "This is where the SQL output would go if it was working right..." > $(testFileName1)
-        cd ..
-      errorActionPreference: 'continue'
-      failOnStderr: false
 
   - task: CmdLine@2
     inputs:
@@ -113,7 +103,7 @@ jobs:
   #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group $(resourceGroupName) --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
 
   # ------------------------------------------------------------------------------------------------------------------------
-  # One way of running the SqlCmd utility
+  # Run SqlCmd utility with userid/password
   # ------------------------------------------------------------------------------------------------------------------------
   # - task: CmdLine@2
   #   displayName: Run Sqlcmd
@@ -122,7 +112,7 @@ jobs:
   #     arguments: '-S $(fqdnServerName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -d $(sqlDatabaseName) -i $(sqlFullFileName)'
 
   # ------------------------------------------------------------------------------------------------------------------------
-  # Another way of running the SqlCmd utility
+  # Run SqlCmd utility with access token
   # ------------------------------------------------------------------------------------------------------------------------
   - task: AzurePowerShell@5
     displayName: Run Invoke-SqlCmd
@@ -133,7 +123,8 @@ jobs:
       script: |
         $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
         Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
-
+    
+    # Some things I've tried...
     # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
     # Write-Verbose "$cmdOutput" -Verbose
     # echo $cmdOutput
@@ -155,27 +146,14 @@ jobs:
   #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
   #     azurePowerShellVersion: LatestVersion
 
-  # - task: PowerShell@2
-  #   displayName: Create Output File 3
-  #   inputs:
-  #     targetType: 'inline'
-  #     script: |
-  #       cd $(Build.ArtifactStagingDirectory)
-  #       cd Output
-  #       echo $cmdOutput > $(testFileName3)
-  #       echo $cmdOutput
-  #     errorActionPreference: 'continue'
-  #     failOnStderr: false
-
   - task: CmdLine@2
     inputs:
       script: |
         echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
         dir $(Build.ArtifactStagingDirectory) /s
-
         echo "Directory of Temp Directory: D:\a\_temp\"
         dir D:\a\_temp\ /s
-    displayName: 'Display Post Run Files'
+    displayName: 'List Output Files'
     continueOnError: true
 
   - task: PublishBuildArtifacts@1
