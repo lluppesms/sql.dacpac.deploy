@@ -104,7 +104,7 @@ jobs:
     inputs:
       azureSubscription: $(serviceConnectionName)
       AuthenticationType: 'connectionString'
-      ConnectionString: 'Data Source=$(fqdnServerName).database.windows.net;Initial Catalog=$(sqlDatabaseName);Encrypt=true;Connect Timeout=60'
+      ConnectionString: 'Data Source=$(fqdnServerName);Initial Catalog=$(sqlDatabaseName);Encrypt=true;Connect Timeout=60'
       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
       AdditionalArguments: '/AccessToken:$(sqlToken)'
       DeleteFirewallRule: false
