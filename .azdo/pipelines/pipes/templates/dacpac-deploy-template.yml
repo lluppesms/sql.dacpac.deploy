@@ -62,11 +62,15 @@ jobs:
       ServerName: '$(fqdnServerName)'
       DatabaseName: '$(sqlDatabaseName)'
       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-      AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-      SqlUsername: '$(sqlAdminUser)'
-      SqlPassword: '$(sqlAdminPassword)'
+      AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+      #AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+      # SqlUsername: '$(sqlAdminUser)'
+      # SqlPassword: '$(sqlAdminPassword)'
       DeleteFirewallRule: false
       
+      # Logins: (try this to get a token for the service principal)
+      #  https://erikej.github.io/sqlserver/2021/02/01/azure-sql-advanced-deployment-part4.html
+
       # There are other possible actions that could be triggered:
       #   DeploymentAction: 'Publish' # 'Publish' | 'Extract' | 'Export' | 'Import' | 'Script' | 'DriftReport' | 'DeployReport'. Required when TaskNameSelector = DacpacTask. Action. Default: Publish.
       #   See: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
