@@ -64,7 +64,7 @@ jobs:
       # https://stackoverflow.com/questions/17402904/prevent-dropping-of-users-when-publishing-a-dacpac-using-sqlpackage-exe
 
   - task: PublishBuildArtifacts@1
-    displayName: Publish DacPac
+    displayName: Save DacPac Artifact
     inputs:
       PathtoPublish: '$(Pipeline.Workspace)\s\${{ parameters.appFolderName }}\${{ parameters.appProjectName }}\bin\Release\${{ parameters.appProjectName }}.dacpac'
       ArtifactName: '${{ parameters.artifactName }}'
