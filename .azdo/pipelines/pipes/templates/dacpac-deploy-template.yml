@@ -66,8 +66,19 @@ jobs:
       SqlUsername: '$(sqlAdminUser)'
       SqlPassword: '$(sqlAdminPassword)'
       DeleteFirewallRule: false
-      # If you want to drop tables not in the source you have to specify the parameter DropObjectsNotInSource=true
-      # See: https://learn.microsoft.com/en-us/answers/questions/811899/sqlpackage-does-not-delete-the-tables-from-target
-      # See also: https://dev.to/dealeron/dropping-objects-with-ssdt-33g2
-      # NOTE: This doesn't work right...!   AdditionalArguments: DropObjectsNotInSource=true
-       #AdditionalArguments: # string. Optional. Use when TaskNameSelector = DacpacTask || DeploymentAction = Extract || DeploymentAction = Export || DeploymentAction = Import || DeploymentAction = Script || DeploymentAction = DeployReport || DeploymentAction = DriftReport. Additional SqlPackage.exe Arguments. 
+      
+      # There are other possible actions that could be triggered:
+      #   DeploymentAction: 'Publish' # 'Publish' | 'Extract' | 'Export' | 'Import' | 'Script' | 'DriftReport' | 'DeployReport'. Required when TaskNameSelector = DacpacTask. Action. Default: Publish.
+      #   See: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
+      #        https://learn.microsoft.com/en-us/sql/tools/sqlpackage/sqlpackage?view=sql-server-ver15
+
+      # If you want to drop tables not in the source you need to specify the parameter DropObjectsNotInSource=true
+      # See:
+      #   https://learn.microsoft.com/en-us/archive/blogs/ssdt/new-advanced-publish-options-to-specify-object-types-to-exclude-or-not-drop
+      #   https://learn.microsoft.com/en-us/answers/questions/811899/sqlpackage-does-not-delete-the-tables-from-target
+      #   https://dev.to/dealeron/dropping-objects-with-ssdt-33g2
+      # NOTE: I can't get this to work right...!   (only valid with certain DeploymentActions...?)
+      #   AdditionalArguments: DropObjectsNotInSource=true
+      #   AdditionalArguments: # string. Optional. Use when TaskNameSelector/DeployType = DacpacTask || DeploymentAction = Extract || DeploymentAction = Export || DeploymentAction = Import || DeploymentAction = Script || DeploymentAction = DeployReport || DeploymentAction = DriftReport. Additional SqlPackage.exe Arguments. 
+      #   DeployType: 'DacpacTask' # 'DacpacTask' | 'SqlTask' | 'InlineSqlTask'. Alias: TaskNameSelector. Required. Deploy type. Default: DacpacTask.
+    
