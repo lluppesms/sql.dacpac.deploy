@@ -1,5 +1,9 @@
 # ----------------------------------------------------------------------------------------------------
 # Template to deploy a SQL Dacpac File to a SQL Database
+# Unless you are using a local user/password, you must find the service principal name that is running
+# your pipeline and execute these commands in the Azure SQL Database to grant access:
+#   CREATE USER yourSP FROM EXTERNAL PROVIDER
+#   ALTER ROLE db_owner ADD MEMBER yourSP
 # ----------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
@@ -26,10 +30,6 @@ jobs:
       value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
-
-    - name: authenticationType
-      value: 'connectionString' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-      # See: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
 
   steps:
   - task: DownloadBuildArtifacts@0
@@ -60,7 +60,6 @@ jobs:
     continueOnError: true
 
   # this "servicePrincipal" login type logs in using some identity magic
-  # - ${{ if eq(variables.authenticationType, 'servicePrincipal') }}:
   - task: SqlAzureDacpacDeployment@1
     displayName: Deploy DACPAC - SP
     inputs:
@@ -73,41 +72,38 @@ jobs:
     continueOnError: true
 
   # this "server" login type logs in as a local sql user with a name and password
-  # - ${{ if eq(variables.authenticationType, 'server') }}:
-  #   - task: SqlAzureDacpacDeployment@1
-  #     displayName: Deploy DACPAC - User
-  #     inputs:
-  #       azureSubscription: $(serviceConnectionName)
-  #       ServerName: $(fqdnServerName)
-  #       DatabaseName: $(sqlDatabaseName)
-  #       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-  #       AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-  #       SqlUsername: '$(sqlAdminUser)'
-  #       SqlPassword: '$(sqlAdminPassword)'
-  #       DeleteFirewallRule: false
+  # - task: SqlAzureDacpacDeployment@1
+  #   displayName: Deploy DACPAC - User
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     ServerName: $(fqdnServerName)
+  #     DatabaseName: $(sqlDatabaseName)
+  #     DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+  #     AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+  #     SqlUsername: '$(sqlAdminUser)'
+  #     SqlPassword: '$(sqlAdminPassword)'
+  #     DeleteFirewallRule: false
 
-  # this "connectionstring" login type uses the service principal that is running the pipeline to go get an access token, then logs into the database with that
-  # - ${{ if eq(variables.authenticationType, 'connectionString') }}:
-  - task: AzurePowerShell@5
-    displayName: Get SQL Access token
-    inputs:
-      azureSubscription: $(serviceConnectionName)
-      ScriptType: 'InlineScript'
-      azurePowerShellVersion: LatestVersion
-      Inline: |
-        $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
-        $sqlToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $context.Tenant.Id.ToString(), $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, "https://database.windows.net").AccessToken
-        Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")      
-
-  - task: SqlAzureDacpacDeployment@1
-    displayName: Deploy DACPAC - CS
-    inputs:
-      azureSubscription: $(serviceConnectionName)
-      AuthenticationType: 'connectionString'
-      ConnectionString: 'Data Source=$(fqdnServerName);Initial Catalog=$(sqlDatabaseName);Encrypt=true;Connect Timeout=60'
-      DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-      AdditionalArguments: '/AccessToken:$(sqlToken)'
-      DeleteFirewallRule: false
+  # # this "connectionstring" login type uses the service principal that is running the pipeline to go get an access token, then logs into the database with that
+  # - task: AzurePowerShell@5
+  #   displayName: Get SQL Access token
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     ScriptType: 'InlineScript'
+  #     azurePowerShellVersion: LatestVersion
+  #     Inline: |
+  #       $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
+  #       $sqlToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $context.Tenant.Id.ToString(), $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, "https://database.windows.net").AccessToken
+  #       Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")      
+  # - task: SqlAzureDacpacDeployment@1
+  #   displayName: Deploy DACPAC - CS
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     AuthenticationType: 'connectionString'
+  #     ConnectionString: 'Data Source=$(fqdnServerName);Initial Catalog=$(sqlDatabaseName);Encrypt=true;Connect Timeout=60'
+  #     DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+  #     AdditionalArguments: '/AccessToken:$(sqlToken)'
+  #     DeleteFirewallRule: false
 
   # ------------------------------------------------------------------------------------------------------------------------
   # Additional References:
