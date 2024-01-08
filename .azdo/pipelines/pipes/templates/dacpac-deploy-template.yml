@@ -27,9 +27,10 @@ jobs:
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
 
-    - name: authenticationType
-      value: 'connectionString' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-      # See: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
+    # set this in the variable group:
+    # - name: authenticationType
+    #   value: 'connectionString' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+    #   # See: https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
 
   steps:
   - task: DownloadBuildArtifacts@0
