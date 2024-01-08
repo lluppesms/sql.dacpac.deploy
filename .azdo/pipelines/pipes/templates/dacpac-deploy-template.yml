@@ -62,11 +62,11 @@ jobs:
   # this "servicePrincipal" login type logs in using some identity magic
   # - ${{ if eq(variables.authenticationType, 'servicePrincipal') }}:
   - task: SqlAzureDacpacDeployment@1
-    displayName: 'Deploy DACPAC - SP'
+    displayName: Deploy DACPAC - SP
     inputs:
-      azureSubscription: '$(serviceConnectionName)'
-      ServerName: '$(fqdnServerName)'
-      DatabaseName: '$(sqlDatabaseName)'
+      azureSubscription: $(serviceConnectionName)
+      ServerName: $(fqdnServerName)
+      DatabaseName: $(sqlDatabaseName)
       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
       AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
       DeleteFirewallRule: false
@@ -75,11 +75,11 @@ jobs:
   # this "server" login type logs in as a local sql user with a name and password
   # - ${{ if eq(variables.authenticationType, 'server') }}:
   #   - task: SqlAzureDacpacDeployment@1
-  #     displayName: 'Deploy DACPAC - User'
+  #     displayName: Deploy DACPAC - User
   #     inputs:
-  #       azureSubscription: '$(serviceConnectionName)'
-  #       ServerName: '$(fqdnServerName)'
-  #       DatabaseName: '$(sqlDatabaseName)'
+  #       azureSubscription: $(serviceConnectionName)
+  #       ServerName: $(fqdnServerName)
+  #       DatabaseName: $(sqlDatabaseName)
   #       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
   #       AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
   #       SqlUsername: '$(sqlAdminUser)'
@@ -91,7 +91,7 @@ jobs:
   - task: AzurePowerShell@5
     displayName: Get SQL Access token
     inputs:
-      azureSubscription: $
+      azureSubscription: $(serviceConnectionName)
       ScriptType: 'InlineScript'
       azurePowerShellVersion: LatestVersion
       Inline: |
@@ -100,9 +100,9 @@ jobs:
         Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")      
 
   - task: SqlAzureDacpacDeployment@1
-    displayName: 'Deploy DACPAC - CS'
+    displayName: Deploy DACPAC - CS
     inputs:
-      azureSubscription: '$(serviceConnectionName)'
+      azureSubscription: $(serviceConnectionName)
       AuthenticationType: 'connectionString'
       ConnectionString: 'Data Source=$(fqdnServerName).database.windows.net;Initial Catalog=$(sqlDatabaseName);Encrypt=true;Connect Timeout=60'
       DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
