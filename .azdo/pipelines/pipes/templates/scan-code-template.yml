@@ -2,26 +2,33 @@
 # Code Scanning Template
 # ----------------------------------------------------------------------------------------------------
 # GitHub Advanced Security For Azure DevOps
-# To enable this, you must enable GHAzDO in your Azure DevOps Organization
+# To enable this, you must enable GHAzDO for this repository in your Azure DevOps Project
 # ----------------------------------------------------------------------------------------------------
 # Microsoft Secure DevOps Scan
 # To enable this, you must add Azure DevOps Extension to your Azure DevOps Organization
 # See https://marketplace.visualstudio.com/items?itemName=ms-securitydevops.microsoft-security-devops-azdevops
 # ----------------------------------------------------------------------------------------------------
-# PSRule is a static analysis tool for Bicep Files
-# https://marketplace.visualstudio.com/items?itemName=bewhite.psrule-vscode
-# To view the PSRule Output, add the SARIF SAST Scans Tab extension to your organization
-# https://marketplace.visualstudio.com/items?itemName=sariftools.scans
-# ----------------------------------------------------------------------------------------------------
 parameters:
 - name: environmentName
   default: 'DEMO'
-- name: runDevSecOpsScan
-  default: 'false'
-- name: runPsRuleScan
-  default: 'false'
 - name: runGHASScan
   default: 'false'
+- name: runMSDevSecOpsScan
+  default: 'false'
+- name: appFolderName
+  default: ''
+- name: appSolutionName
+  default: ''
+- name: appProjectFolderName
+  default: '/src/DirWhereProjLives'
+- name: appProjectExtension
+  default: 'csproj' # or 'sqlproj' (!)
+- name: workingDirectoryInfra
+  default: '/infra/bicep'
+- name: workingDirectoryIgnore
+  default: '/Docs'
+- name: continueOnScanError
+  default: 'true'
 
 # ----------------------------------------------------------------------------------------------------
 jobs:
@@ -34,19 +41,80 @@ jobs:
   - job: GHASScanJob
     displayName: GHAS Scan Job
     steps:
+    # Very basic simple example that might work sometimes...
+    # - task: AdvancedSecurity-Codeql-Init@1
+    #   inputs:
+    #     languages: 'csharp'
+    # - task: DotNetCoreCLI@2
+    #   inputs:
+    #     command: 'restore'
+    # - task: AdvancedSecurity-Dependency-Scanning@1
+    # - task: AdvancedSecurity-Codeql-Autobuild@1
+    # - task: AdvancedSecurity-Codeql-Analyze@1
+    # - task: AdvancedSecurity-Publish@1 
+
+    - task: CmdLine@2
+      inputs:
+        script: |
+          echo "parameters.continueOnScanError=${{ parameters.continueOnScanError }}"
+          echo "parameters.appProjectFolderName=${{ parameters.appProjectFolderName }}"
+          echo "parameters.workingDirectoryInfra=${{ parameters.workingDirectoryInfra }}"
+          echo "parameters.workingDirectoryIgnore=${{ parameters.workingDirectoryIgnore }}"
+          echo "Project Path: $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.{{ parameters.appProjectExtension }}"
+          echo "Build.SourcesDirectory=$(Build.SourcesDirectory)"
+          echo "------------------------------------------------"
+          echo "Directory of Project Files: $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}"
+          dir $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }} /s
+          echo "------------------------------------------------"
+          echo "Directory of Full Staging Directory: $(Build.SourcesDirectory)"
+          dir $(Build.SourcesDirectory) /s
+      displayName: 'Display Variables and Tree'
+      continueOnError: true
+
     - task: AdvancedSecurity-Codeql-Init@1
       inputs:
         languages: 'csharp'
+        querysuite: security-extended
+      #   sourcesfolder: ${{ parameters.appProjectFolderName }}
+      #   codeqlpathstoinclude: ${{ parameters.appProjectFolderName }}
+      #   codeqlpathstoignore: ${{ parameters.workingDirectoryIgnore }}
+
     - task: DotNetCoreCLI@2
+      displayName: 'Restore project'
       inputs:
         command: 'restore'
+        projects: '$(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.${{ parameters.appProjectExtension }}'
+
+    - ${{ if eq(lower(parameters.appProjectExtension), 'csproj') }}:
+      - task: DotNetCoreCLI@2
+        displayName: Build CS Project
+        inputs:
+          projects: '$(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.${{ parameters.appProjectExtension }}'
+          arguments: '--output publish_output --configuration Release'
+
+    - ${{ if eq(lower(parameters.appProjectExtension), 'sqlproj') }}:
+      - task: VSBuild@1
+        displayName: Build DacPac Project
+        inputs:
+          solution: '${{ parameters.appFolderName }}/${{ parameters.appSolutionName }}.sln'
+          platform: 'Any CPU'
+          configuration: 'Release'
+
     - task: AdvancedSecurity-Dependency-Scanning@1
-    - task: AdvancedSecurity-Codeql-Autobuild@1
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+    - ${{ if eq(lower(parameters.appProjectExtension), 'csproj') }}:
+      - task: AdvancedSecurity-Codeql-Autobuild@1
+        continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
     - task: AdvancedSecurity-Codeql-Analyze@1
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
     - task: AdvancedSecurity-Publish@1 
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
 
 # ----------------------------------------------------------------------------------------------------
-- ${{ if eq(lower(parameters.runDevSecOpsScan), 'true') }}:
+- ${{ if eq(lower(parameters.runMSDevSecOpsScan), 'true') }}:
   - job: DevSecOpsScanJob
     displayName: DevSecOps Scan Job
     steps:
@@ -62,24 +130,4 @@ jobs:
 
     - task: MicrosoftSecurityDevOps@1
       displayName: 'Run Microsoft Security DevOps'
-      continueOnError: true
-
-# ----------------------------------------------------------------------------------------------------
-- ${{ if eq(lower(parameters.runPsRuleScan), 'true') }}:
-  - job: PSRuleScanJob
-    displayName: PSRule Scan Job
-    steps:
-    - task: ps-rule-assert@2
-      displayName: Run PSRule Analysis
-      inputs:
-        modules: 'PSRule.Rules.Azure'
-        outputFormat: Sarif
-        outputPath: reports/PSRuleOutput.sarif
-      continueOnError: true
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish PSRule Results
-      inputs:
-        pathToPublish: reports/PSRuleOutput.sarif
-        artifactName: CodeAnalysisLogs
       continueOnError: true

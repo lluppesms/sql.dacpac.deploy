@@ -1,0 +1,310 @@
+# ----------------------------------------------------------------------------------------------------
+# Code Scanning Template
+# ----------------------------------------------------------------------------------------------------
+# GitHub Advanced Security For Azure DevOps
+# To enable this, you must enable GHAzDO in your Azure DevOps Organization
+# https://docs.github.com/en/github-ae@latest/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/configuring-advanced-setup-for-code-scanning
+# ----------------------------------------------------------------------------------------------------
+# Microsoft Secure DevOps Scan
+# To enable this, you must add Azure DevOps Extension to your Azure DevOps Organization
+# See https://marketplace.visualstudio.com/items?itemName=ms-securitydevops.microsoft-security-devops-azdevops
+#
+# Details: https://github.com/microsoft/security-devops-action/blob/main/action.yml
+# Input Parameters:
+#   categories:
+#     CSV of analyzer categories to run. Values: code,artifacts,IaC,containers (Defaults to all)
+#   tools:
+#     CSV of analyzer tools to run. Example antimalware,bandit,binskim,eslint,templateanalyzer,terrascan,trivy
+#       AntiMalware: code, artifacts  (>>> doesn't work when run on ubuntu agent...???)
+#       Bandit: python
+#       BinSkim: binary 
+#       ESlint: JavaScript
+#       Template Analyzer:	IaC, ARM templates, Bicep files
+#       Terrascan: IaC, Terraform (HCL2), Kubernetes (JSON/YAML), Helm v3, Kustomize, Dockerfiles, Cloudformation
+#       Trivy:	container images, file systems, git repositories
+# ----------------------------------------------------------------------------------------------------
+# PSRule is a static analysis tool for Bicep Files
+# https://marketplace.visualstudio.com/items?itemName=bewhite.psrule-vscode
+# To view the PSRule Output, add the SARIF SAST Scans Tab extension to your organization
+# https://marketplace.visualstudio.com/items?itemName=sariftools.scans
+# ----------------------------------------------------------------------------------------------------
+parameters:
+- name: environmentName
+  default: 'DEV'
+- name: runGHAzDOScan
+  default: 'false'
+- name: runMSDevSecOpsScan
+  default: 'none'
+  type: string
+- name: appProjectFolderName
+  default: '/src/DirWhereProjLives'
+- name: appProjectExtension
+  default: 'csproj' # or 'sqlproj' (!)
+- name: workingDirectoryInfra
+  default: '/infra/bicep'
+- name: workingDirectoryIgnore
+  default: '/Docs'
+- name: runPsRuleScan
+  default: 'false'
+- name: continueOnScanError
+  default: 'true'
+
+# ----------------------------------------------------------------------------------------------------
+jobs:
+- deployment: CodeScanDeployment
+  displayName: Initialize Code Scans
+  environment: ${{ parameters.environmentName }}
+
+# ----------------------------------------------------------------------------------------------------
+# GHAzDO Scanner
+# ----------------------------------------------------------------------------------------------------
+- ${{ if eq(lower(parameters.runGHAzDOScan), 'true') }}:
+  - job: GHAzDOScanJob
+    displayName: GHAzDO Scan Job
+    steps:
+    - task: CmdLine@2
+      inputs:
+        script: |
+          echo "parameters.continueOnScanError=${{ parameters.continueOnScanError }}"
+          echo "parameters.appProjectFolderName=${{ parameters.appProjectFolderName }}"
+          echo "parameters.workingDirectoryInfra=${{ parameters.workingDirectoryInfra }}"
+          echo "parameters.workingDirectoryIgnore=${{ parameters.workingDirectoryIgnore }}"
+          echo "Project Path: $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.{{ parameters.appProjectExtension }}"
+          echo "Build.SourcesDirectory=$(Build.SourcesDirectory)"
+          echo "------------------------------------------------"
+          echo "Directory of Project Files: $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}"
+          dir $(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }} /s
+          echo "------------------------------------------------"
+          echo "Directory of Full Staging Directory: $(Build.SourcesDirectory)"
+          dir $(Build.SourcesDirectory) /s
+      displayName: 'Display Variables and Tree'
+      continueOnError: true
+
+    - task: AdvancedSecurity-Codeql-Init@1
+      inputs:
+        languages: 'csharp'
+        querysuite: security-extended
+      #   codeqlpathstoinclude: ${{ parameters.appProjectFolderName }}
+      #   codeqlpathstoignore: ${{ parameters.workingDirectoryIgnore }}
+      #   sourcesfolder: ${{ parameters.appProjectFolderName }}
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'restore'
+        projects: '$(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.${{ parameters.appProjectExtension }}'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build project test'
+      inputs:
+        projects: '$(Build.SourcesDirectory)\${{ parameters.appProjectFolderName }}\*.${{ parameters.appProjectExtension }}'
+        arguments: '--output publish_output --configuration Release'
+
+    - task: AdvancedSecurity-Dependency-Scanning@1
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+    - task: AdvancedSecurity-Codeql-Autobuild@1
+
+    - task: AdvancedSecurity-Codeql-Analyze@1
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+    - task: AdvancedSecurity-Publish@1 
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+- job: SecurityScanJob
+  displayName: Run MS SecDevOps Scans
+  variables:
+    - name: continueAfterScanErrors
+      value: ${{ eq(parameters.continueOnScanError, 'true') }}
+  steps:
+  - ${{ if ne(lower(parameters.runMSDevSecOpsScan), 'none') }}:
+    - bash: |
+        echo "parameters.runMSDevSecOpsScan=${{parameters.runMSDevSecOpsScan}}"
+        echo "parameters.appProjectFolderName=${{parameters.appProjectFolderName}}"
+        echo "parameters.workingDirectoryInfra=${{parameters.workingDirectoryInfra}}"
+        echo "parameters.workingDirectoryIgnore=${{parameters.workingDirectoryIgnore}}"
+        echo "continueAfterScanErrors=$(continueAfterScanErrors)"
+        echo "parameters.continueOnScanError=${{parameters.continueOnScanError}}"
+        echo "Directory Listing for $(Pipeline.Workspace)"
+        tree $(Pipeline.Workspace)
+      displayName: 'Display Variables'
+      continueOnError: true
+    - task: UseDotNet@2
+      displayName: 'Use dotnet 3.1.x'
+      inputs:
+        version: 3.1.x
+    - task: UseDotNet@2
+      displayName: 'Use dotnet 5.0.x'
+      inputs:
+        version: 5.0.x
+    - task: UseDotNet@2
+      displayName: 'Use dotnet 6.0'
+      inputs:
+        version: 6.0.x
+# ----------------------------------------------------------------------------------------------------
+# Old example with no parms works and does everything
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'generic'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: 'Run Microsoft Security DevOps'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'generic'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# Scan all folders for everything...
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_everything'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run Everything MS SecDevOps Scan
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: CmdLine@2
+      inputs:
+        script: |
+          echo "Directory of pipeline workspace: $(Pipeline.Workspace)"
+          tree $(Pipeline.Workspace)
+      displayName: 'Display Files'
+      continueOnError: true
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_everything'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# Scan all folders for code...
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_code_all_folders'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run Full Code Scan
+      inputs:
+        categories: code,artifacts
+        tools: eslint,binskim  # antimalware
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_code_all_folders'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# Scan all folders for infra...
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_infra_all_folders'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run Full Infra Scan
+      inputs:
+        categories: IaC,containers
+        tools: templateanalyzer,terrascan,trivy
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_infra_all_folders'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# scan only source code directory...
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_code_one_folder'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run 1D Code Scan
+      inputs:
+        categories: code,artifacts
+        tools: eslint,binskim  # antimalware
+      env:
+        gdn_run_workingdirectory: ${{ parameters.appProjectFolderName }}
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_code_one_folder'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# Scan only infra code directory...
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_infra_one_folder'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run 1D Infra Scan
+      inputs:
+        categories: IaC,containers
+        tools: templateanalyzer,terrascan
+      env:
+        gdn_run_workingdirectory: ${{ parameters.workingDirectoryInfra }}
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_infra_one_folder'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# BUG: This should atttempt to scan to the infra directory for code errors and not find any code files
+# HOWEVER: it's still scanning the entire repo and finding issues
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_infra_folder_for_code'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run Bad Code Scan on Infra Folder
+      inputs:
+        categories: code,artifacts
+        tools: eslint,binskim  # antimalware
+      env:
+        gdn_run_workingdirectory: ${{ parameters.workingDirectoryInfra }}
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_infra_folder_for_code'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# BUG: This should atttempt to scan to the code directory for infra errors and not find any infra files
+# HOWEVER: it's still scanning the entire repo and finding issues
+# ----------------------------------------------------------------------------------------------------
+  - ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'scan_code_folder_for_infra'), eq(lower(parameters.runMSDevSecOpsScan), 'all_of_the_above')) }}:
+    - task: MicrosoftSecurityDevOps@1
+      displayName: Run Bad Infra Scan on Code Folder
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+      inputs:
+        categories: IaC,containers
+        tools: templateanalyzer,terrascan
+      env:
+        gdn_run_workingdirectory: ${{ parameters.appProjectFolderName }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Scan Results
+      inputs:
+        pathToPublish: '$(System.ArtifactsDirectory)/.gdn/msdo.sarif'
+        artifactName: 'scan_code_folder_for_infra'
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+
+# ----------------------------------------------------------------------------------------------------
+# PSRule Bicep Scan
+# ----------------------------------------------------------------------------------------------------
+- ${{ if eq(lower(parameters.runPsRuleScan), 'true') }}:
+  - job: BicepScanJob
+    displayName: PSRule Bicep Scan Job
+    steps:
+    - task: ps-rule-assert@2
+      displayName: Run PSRule Analysis
+      inputs:
+        modules: 'PSRule.Rules.Azure'
+        outputFormat: Sarif
+        outputPath: reports/PSRuleOutput.sarif
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}
+    - task: PublishBuildArtifacts@1
+      displayName: Publish PSRule Results
+      inputs:
+        pathToPublish: reports/PSRuleOutput.sarif
+        artifactName: PSRule
+      continueOnError: ${{ eq(parameters.continueOnScanError, 'true') }}

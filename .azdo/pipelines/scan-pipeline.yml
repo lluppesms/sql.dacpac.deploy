@@ -1,37 +1,24 @@
 # ------------------------------------------------------------------------------------------------------------------------
-# Pipeline to deploy Azure Resources Only
-# See readme file for info about variable group "SQLDeployDemo"
+# Pipeline to Run Security Scan
 # ------------------------------------------------------------------------------------------------------------------------
 name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
 pool:
   vmImage: windows-latest # dacpac restore only runs on Windows...
-variables:
-  - group: SQLDeployDemo
 
 # ------------------------------------------------------------------------------------------------------------------------
-trigger:
-  # since this repo has both AzDO and GHA pipelines, nothing is run automatically...
-  - none
-  # batch: true
-  # branches:
-  #   include:
-  #     - main
-  # paths:
-  #   include: 
-  #     - '**/*.yml'
-  #     - '**/*.yaml'
-  #     - '**/*.bicep'
+schedules:
+- cron: '0 0 * * *'
+  displayName: Daily midnight build
+  branches:
+    include:
+    - master
 
 # ----------------------------------------------------------------------------------------------------
 parameters:
-  - name: deployMultiStage
-    displayName: Multi-Stage Deploy
-    type: boolean
-    default: false
   - name: runGHASScan
     displayName: Run GHAS Scan
     type: boolean
-    default: false
+    default: true
   - name: runMSDevSecOpsScan
     displayName: Run MS DevSecOps Scan
     type: boolean
@@ -39,20 +26,15 @@ parameters:
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
-  - template: pipes/infra-only-pipe.yml
+- stage: ScanApplication
+  displayName: Scan Application
+  jobs:
+  - template: pipes/templates/scan-code-template.yml
     parameters:
-      environments: ['DEMO']
+      environmentName: 'DEMO'
+      appFolderName: 'src\sql.database'
+      appSolutionName: 'sql.database'
       appProjectFolderName: 'src\sql.database\sql.database'
       appProjectExtension: 'sqlproj'
-      runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}
-
-- ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
-  - template: pipes/infra-only-pipe.yml
-    parameters:
-      environments: ['DEV','QA']
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectExtension: 'sqlproj'
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
-      runGHASScan: ${{ parameters.runGHASScan }}

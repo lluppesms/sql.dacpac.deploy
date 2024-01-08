@@ -61,12 +61,14 @@
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\JokeCategory.sql" />
     <Build Include="dbo\Tables\JokeRating.sql" />
     <Build Include="dbo\Tables\Joke.sql" />
     <Build Include="dbo\Stored Procedures\sp_QueryJokes.sql" />
+    <Build Include="dbo\Views\vw_Jokes.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Compare_LocalDB_vs_Project.scmp" />

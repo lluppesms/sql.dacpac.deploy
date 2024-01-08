@@ -9,27 +9,32 @@ parameters:
   default: ''
 - name: appSolutionName
   default: ''
+- name: appProjectFolderName
+  default: ''
 - name: appProjectName
   default: ''
-- name: runDevSecOpsScan
-  default: 'false'
-- name: runPsRuleScan
-  default: 'false'
+- name: appProjectExtension
+  default: 'csproj' # or 'sqlproj' (!)
 - name: runGHASScan
+  default: 'false'
+- name: runMSDevSecOpsScan
   default: 'false'
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if or(or(eq(lower(parameters.runDevSecOpsScan), 'true'), eq(lower(parameters.runPsRuleScan), 'true')), eq(lower(parameters.runGHASScan), 'true')) }}:
+- ${{ if or(eq(lower(parameters.runMSDevSecOpsScan), 'true'), eq(lower(parameters.runGHASScan), 'true')) }}:
   - stage: ScanApplication
     displayName: Scan Application
     jobs:
     - template: templates/scan-code-template.yml
       parameters:
         environmentName: 'DEMO'
-        runDevSecOpsScan: ${{ parameters.runDevSecOpsScan }}
-        runPsRuleScan: ${{ parameters.runPsRuleScan }}
+        runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
         runGHASScan: ${{ parameters.runGHASScan }}
+        appFolderName: ${{ parameters.appFolderName }}
+        appSolutionName: ${{ parameters.appSolutionName }}
+        appProjectFolderName: ${{ parameters.appProjectFolderName }}
+        appProjectExtension: ${{ parameters.appProjectExtension }}
 
 - stage: BuildDacPac
   displayName: Build DACPAC

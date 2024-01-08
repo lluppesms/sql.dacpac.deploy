@@ -54,6 +54,14 @@ jobs:
       solution: '${{ parameters.appFolderName }}/${{ parameters.appSolutionName }}.sln'
       platform: '$(buildPlatform)'
       configuration: '$(buildConfiguration)'
+      msbuildArgs: /p:DropObjectsNotInSource=False
+
+      # In theory, these parms drop all EXCEPT for these things....: (haven't tested them...)
+      #    msbuildArgs: /p:DropObjectsNotInSource=True /p:ExcludeObjectTypes=Users;Logins;RoleMembership;Permissions;Credentials;DatabaseScopedCredentials
+      # For more info, see:
+      # https://learn.microsoft.com/en-us/archive/blogs/ssdt/new-advanced-publish-options-to-specify-object-types-to-exclude-or-not-drop      
+      # https://learn.microsoft.com/en-us/sql/tools/sqlpackage/sqlpackage?view=sql-server-ver16
+      # https://stackoverflow.com/questions/17402904/prevent-dropping-of-users-when-publishing-a-dacpac-using-sqlpackage-exe
 
   - task: PublishBuildArtifacts@1
     displayName: Publish DacPac

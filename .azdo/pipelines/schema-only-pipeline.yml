@@ -8,7 +8,7 @@ pool:
 
 # ----------------------------------------------------------------------------------------------------
 trigger:
-  # since this repo has both AzDO and GHA pipelines, nothing is run automatically...
+  # this repo is set so that nothing is run automatically...
   - none
   # batch: true
   # branches:
@@ -16,7 +16,7 @@ trigger:
   #     - main
   # paths:
   #   include:
-  #     - 'src/sql.database/*'
+  #     - 'src\sql.database/*'
   #   exclude: 
   #     - '**/*.yml'
   #     - '**/*.yaml'
@@ -40,7 +40,7 @@ stages:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO']
-      appFolderName: 'src/sql.database'
+      appFolderName: 'src\sql.database'
       appSolutionName: 'sql.database'
       appProjectName: 'sql.database'
 
@@ -48,6 +48,6 @@ stages:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO','QA']
-      appFolderName: 'src/sql.database'
+      appFolderName: 'src\sql.database'
       appSolutionName: 'sql.database'
       appProjectName: 'sql.database'

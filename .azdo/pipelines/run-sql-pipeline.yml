@@ -16,7 +16,7 @@ trigger:
   #     - main
   # paths:
   #   include:
-  #     - 'src/sql.database/*'
+  #     - 'src\sql.database/*'
   #   exclude: 
   #     - '**/*.yml'
   #     - '**/*.yaml'

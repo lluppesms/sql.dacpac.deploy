@@ -4,10 +4,6 @@
 
 This repository will demonstrate how to deploy an Azure SQL Server instance using pipelines with Bicep files, and then deploy and/or update a database schema using a SQL Server Database Project, which creates a DACPAC file that is then published to Azure with a YML pipeline.
 
-[![Open in vscode.dev](https://img.shields.io/badge/Open%20in-vscode.dev-blue)][1]
-
-[1]: https://vscode.dev/github/lluppesms/sql.database.project/
-
 ## Usage
 
 Follow these steps to publish and update a database schema to an existing Azure SQL Server using Azure DevOps pipelines:
