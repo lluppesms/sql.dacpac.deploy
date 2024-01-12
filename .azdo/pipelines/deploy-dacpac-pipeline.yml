@@ -1,0 +1,50 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Simplified Pipeline to build and deploy Database Objects Only to existing resources
+# See readme file for info about variable group "sqldeploy"
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: windows-latest # dacpac restore only runs on Windows...
+
+# ----------------------------------------------------------------------------------------------------
+trigger:
+  - none
+  # this pipeline is defaulting to run manually. to change it to run upon commit, uncomment the following:
+  # batch: true
+  # branches:
+  #   include:
+  #     - main
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - group: SQLDeployDemo
+  - name: appFolderName
+    value:  'src\sql.database'
+  - name: appSolutionName
+    value:  'sql.database'
+  - name: appProjectName
+    value:  'sql.database'
+  - name: environmentName
+    value: 'nonprod'
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- stage: BuildDacPac
+  displayName: Build DACPAC
+  jobs:
+  - template: deploy-dacpac-build-template.yml
+    parameters:
+      environmentName: $(environmentName)
+      appFolderName:   $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectName:  $(appProjectName)
+      artifactName:    'dacpac'
+
+- stage: DeployDACPACSchema
+  displayName: Deploy DACPAC Schema
+  jobs:
+  - template: deploy-dacpac-deploy-template.yml
+    parameters:
+      environmentName: $(environmentName)
+      appProjectName:  $(appProjectName)
+      artifactName:    'dacpac'

@@ -1,0 +1,120 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline template to run one SQL Script against an existing database
+# See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
+# ------------------------------------------------------------------------------------------------------------------------
+# NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get that to work.
+# Therefore, I have no good way in the pipeline to know if the Invoke succeeded or failed.
+# ------------------------------------------------------------------------------------------------------------------------
+parameters: 
+- name: environmentName
+  default:  'DEMO'
+- name: sqlFolderName
+  default: ''
+- name: sqlFileName
+  default: ''
+
+# ------------------------------------------------------------------------------------------------------------------------
+jobs:
+- deployment: Deploy${{ parameters.environmentName }}SQL
+  displayName: Initialize ${{ parameters.environmentName }} Deploy SQL
+  environment: ${{ parameters.environmentName }}
+
+- job: DeployDB${{ parameters.environmentName }}SQL
+  displayName: Deploy ${{ parameters.environmentName }} SQL
+  variables:
+    - name: environmentNameUpper
+      value: ${{ upper(parameters.environmentName) }}
+    - name: environmentNameLower
+      value: ${{ lower(parameters.environmentName) }}
+    - name: sqlServerName
+      value: $(sqlServerName)
+    - name: fqdnServerName
+      value: $(sqlServerName).database.windows.net
+    - name: sqlFullFolderName
+      value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}
+    - name: sqlFullFileName
+      value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
+    - name: logFullFileName
+      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
+    - name: testFileName1
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
+    - name: testFileName2
+      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
+
+  steps:
+  - bash: |
+      resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
+      echo "resourceGroupName=$resourceGroupName"
+      echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+    displayName: 'Create Variables'
+    continueOnError: true
+
+  - task: PowerShell@2
+    displayName: Make Output Folder
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd $(Build.ArtifactStagingDirectory)
+        md Output
+        cd Output
+        echo "Dummy file to create one output to publish..." > $(testFileName1)
+        cd ..
+      errorActionPreference: 'continue'
+      failOnStderr: false
+
+  - bash: |
+      echo "resourceGroupName=$(resourceGroupName)"
+      echo "serviceConnectionName=$(serviceConnectionName)"
+      echo "subscriptionName=$(subscriptionName)"
+      echo "sqlServerName=$(sqlServerName)"
+      echo "fqdnServerName=$(fqdnServerName)"
+      echo "sqlDatabaseName=$(sqlDatabaseName)"
+      echo "sqlFullFileName=$(sqlFullFileName)"
+      echo "logFullFileName=$(logFullFileName)"
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'" 
+    displayName: 'Display variables and CMD'
+    continueOnError: true
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "SQL File: $(sqlFullFileName)"
+        echo "Directory of $(sqlFullFolderName)"
+        dir $(sqlFullFolderName) /s
+    displayName: 'Display SQL Files'
+    continueOnError: true
+    
+  # ------------------------------------------------------------------------------------------------------------------------
+  # Run SqlCmd utility with access token
+  # ------------------------------------------------------------------------------------------------------------------------
+  - task: AzurePowerShell@5
+    displayName: Run Invoke-SqlCmd
+    inputs:
+      azureSubscription: $(serviceConnectionName)
+      azurePowerShellVersion: 'LatestVersion'
+      scriptType: inlinescript
+      script: |
+        $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+        Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
+    
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
+        dir $(Build.ArtifactStagingDirectory) /s
+        echo "Directory of Temp Directory: D:\a\_temp\"
+        dir D:\a\_temp\ /s
+    displayName: 'List Output Files'
+    continueOnError: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Input Artifact'
+    inputs:
+      PathtoPublish: '$(sqlFullFileName)'
+      ArtifactName: 'Input'
+      
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Output Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)\Output'
+      ArtifactName: 'Output'

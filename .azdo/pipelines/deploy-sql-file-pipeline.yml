@@ -1,0 +1,37 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Simplified Pipeline to run one sql file against a database
+# See readme file for info about variable group "sqldeploy"
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: windows-latest # dacpac restore only runs on Windows...
+
+# ----------------------------------------------------------------------------------------------------
+trigger:
+  - none
+  # this pipeline is defaulting to run manually. to change it to run upon commit, uncomment the following:
+  # batch: true
+  # branches:
+  #   include:
+  #     - main
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - group: sqldeploy
+  - name: sqlFolderName
+    value: 'src\Patch\'
+  - name: sqlFileName
+    value: 'Patch-20231128.sql'
+  - name: environmentName
+    value: 'nonprod'
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+  - stage: RunSQL
+    displayName: Run SQL
+    jobs:
+    - template: deploy-sql-run-template.yml
+      parameters:
+        environmentName: $(environmentName)
+        sqlFolderName:   $(sqlFolderName)
+        sqlFileName:     $(sqlFileName)
