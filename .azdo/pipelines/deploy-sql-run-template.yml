@@ -27,7 +27,7 @@ jobs:
     - name: environmentNameLower
       value: ${{ lower(parameters.environmentName) }}
     - name: sqlServerName
-      value: $(sqlServerName)
+      value: $(sqlServerNamePrefix)
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
     - name: sqlFullFolderName

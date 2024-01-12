@@ -34,10 +34,10 @@ stages:
   jobs:
   - template: deploy-dacpac-build-template.yml
     parameters:
-      environmentName: $(environmentName)
-      appFolderName:   $(appFolderName)
-      appSolutionName: $(appSolutionName)
-      appProjectName:  $(appProjectName)
+      environmentName: ${{ variables.environmentName }}
+      appFolderName:   ${{ variables.appFolderName }}
+      appSolutionName: ${{ variables.appSolutionName }}
+      appProjectName:  ${{ variables.appProjectName }}
       artifactName:    'dacpac'
 
 - stage: DeployDACPACSchema
@@ -45,6 +45,6 @@ stages:
   jobs:
   - template: deploy-dacpac-deploy-template.yml
     parameters:
-      environmentName: $(environmentName)
-      appProjectName:  $(appProjectName)
+      environmentName: ${{ variables.environmentName }}
+      appProjectName:  ${{ variables.appProjectName }}
       artifactName:    'dacpac'

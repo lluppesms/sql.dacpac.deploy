@@ -32,6 +32,6 @@ stages:
     jobs:
     - template: deploy-sql-run-template.yml
       parameters:
-        environmentName: $(environmentName)
-        sqlFolderName:   $(sqlFolderName)
-        sqlFileName:     $(sqlFileName)
+        environmentName: ${{ variables.environmentName }}
+        sqlFolderName:   ${{ variables.sqlFolderName }}
+        sqlFileName:     ${{ variables.sqlFileName }}
