@@ -1,0 +1,14 @@
+# ----------------------------------------------------------------------------------------------------
+# Variables common to all environments
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - name: appFolderName
+    value: 'src\sql.database'
+  - name: appSolutionName
+    value: 'sql.database'
+  - name: appProjectFolderName
+    value: 'src\sql.database\sql.database'
+  - name: appProjectName
+    value: 'sql.database'
+  - name: appProjectExtension
+    value: 'sqlproj'

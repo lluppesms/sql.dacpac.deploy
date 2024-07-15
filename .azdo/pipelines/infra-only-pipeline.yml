@@ -5,8 +5,6 @@
 name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
 pool:
   vmImage: windows-latest # dacpac restore only runs on Windows...
-variables:
-  - group: SQLDeployDemo
 
 # ------------------------------------------------------------------------------------------------------------------------
 trigger:
@@ -38,13 +36,18 @@ parameters:
     default: false
 
 # ----------------------------------------------------------------------------------------------------
+variables:
+  - group: SQLDeployDemo
+  - template: vars/var-common.yml
+
+# ----------------------------------------------------------------------------------------------------
 stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
   - template: pipes/infra-only-pipe.yml
     parameters:
       environments: ['DEMO']
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectExtension: 'sqlproj'
+      appProjectFolderName: $(appProjectFolderName)
+      appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}
 
@@ -52,7 +55,7 @@ stages:
   - template: pipes/infra-only-pipe.yml
     parameters:
       environments: ['DEV','QA']
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectExtension: 'sqlproj'
+      appProjectFolderName: $(appProjectFolderName)
+      appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}

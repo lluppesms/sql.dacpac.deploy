@@ -40,6 +40,14 @@ jobs:
       artifactName: '${{ parameters.artifactName }}'
       downloadPath: '$(System.ArtifactsDirectory)'
 
+  # - task: AzureKeyVault@2
+  #   displayName: 'Download secrets from Azure Key Vault'
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     KeyVaultName: $(keyVaultName)
+  #     SecretsFilter: 'sql*'
+  #     RunAsPreJob: false
+
   - task: CmdLine@2
     displayName: 'Display Variables and Files'
     inputs:
@@ -58,31 +66,36 @@ jobs:
         echo "Directory of Artifacts Directory: $(System.ArtifactsDirectory)"
         dir $(System.ArtifactsDirectory) /s
     continueOnError: true
-
-  # this "servicePrincipal" login type logs in using some identity magic
-  - task: SqlAzureDacpacDeployment@1
-    displayName: Deploy DACPAC - SP
-    inputs:
-      azureSubscription: $(serviceConnectionName)
-      ServerName: $(fqdnServerName)
-      DatabaseName: $(sqlDatabaseName)
-      DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-      AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-      DeleteFirewallRule: false
-    continueOnError: true
-
-  # this "server" login type logs in as a local sql user with a name and password
+  
+  # This "servicePrincipal" step used to work, but on 2024-07-15 it gets this error...:
+  #   ##[error]*** Could not deploy package.
+  #   ##[error]Unable to connect to target server 'llldacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
+  #   ##[error]Login failed for user '<token-identified principal>'.
+  #   ##[error]The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
+  # # this "servicePrincipal" login type logs in using some identity magic
   # - task: SqlAzureDacpacDeployment@1
-  #   displayName: Deploy DACPAC - User
+  #   displayName: Deploy DACPAC - SP
   #   inputs:
   #     azureSubscription: $(serviceConnectionName)
   #     ServerName: $(fqdnServerName)
   #     DatabaseName: $(sqlDatabaseName)
   #     DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-  #     AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-  #     SqlUsername: '$(sqlAdminUser)'
-  #     SqlPassword: '$(sqlAdminPassword)'
+  #     AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
   #     DeleteFirewallRule: false
+  #   continueOnError: true
+
+  # this "server" login type logs in as a local sql user with a name and password
+  - task: SqlAzureDacpacDeployment@1
+    displayName: Deploy DACPAC - Local User
+    inputs:
+      azureSubscription: $(serviceConnectionName)
+      ServerName: $(fqdnServerName)
+      DatabaseName: $(sqlDatabaseName)
+      DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+      AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+      SqlUsername: '$(sqlAdminUser)'
+      SqlPassword: '$(sqlAdminPassword)'
+      DeleteFirewallRule: false
 
   # # this "connectionstring" login type uses the service principal that is running the pipeline to go get an access token, then logs into the database with that
   # - task: AzurePowerShell@5
@@ -95,6 +108,7 @@ jobs:
   #       $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
   #       $sqlToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $context.Tenant.Id.ToString(), $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, "https://database.windows.net").AccessToken
   #       Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")      
+  
   # - task: SqlAzureDacpacDeployment@1
   #   displayName: Deploy DACPAC - CS
   #   inputs:

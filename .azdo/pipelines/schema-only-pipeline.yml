@@ -33,6 +33,7 @@ parameters:
 # ----------------------------------------------------------------------------------------------------
 variables:
   - group: SQLDeployDemo
+  - template: vars/var-common.yml
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -40,14 +41,14 @@ stages:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO']
-      appFolderName: 'src\sql.database'
-      appSolutionName: 'sql.database'
-      appProjectName: 'sql.database'
+      appFolderName: $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectName: $(appProjectName)
 
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/schema-only-pipe.yml
     parameters:
       environments: ['DEMO','QA']
-      appFolderName: 'src\sql.database'
-      appSolutionName: 'sql.database'
-      appProjectName: 'sql.database'
+      appFolderName: $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectName: $(appProjectName)

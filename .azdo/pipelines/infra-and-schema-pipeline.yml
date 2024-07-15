@@ -38,6 +38,7 @@ parameters:
 # ----------------------------------------------------------------------------------------------------
 variables:
   - group: SQLDeployDemo
+  - template: vars/var-common.yml
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -45,11 +46,11 @@ stages:
   - template: pipes/infra-and-schema-pipe.yml
     parameters:
       environments: ['DEMO']
-      appFolderName: 'src\sql.database'
-      appSolutionName: 'sql.database'
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectName: 'sql.database'
-      appProjectExtension: 'sqlproj'
+      appFolderName: $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectFolderName: $(appProjectFolderName)
+      appProjectName: $(appProjectName)
+      appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}
 
@@ -57,10 +58,10 @@ stages:
   - template: pipes/infra-and-schema-pipe.yml
     parameters:
       environments: ['DEMO','QA']
-      appFolderName: 'src\sql.database'
-      appSolutionName: 'sql.database'
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectName: 'sql.database'
-      appProjectExtension: 'sqlproj'
+      appFolderName: $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectFolderName: $(appProjectFolderName)
+      appProjectName: $(appProjectName)
+      appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}

@@ -8,6 +8,10 @@ parameters:
   default: 'infra/Bicep'
 - name: templateFileName
   default: 'main.bicep'
+- name: parameterFileName
+  default: 'main.bicepparam' # 'main.parameters.json'
+- name: deploymentMode
+  default: 'Incremental'  # 'Incremental' | 'Complete' | 'Validation'
 
 # ----------------------------------------------------------------------------------------------------
 jobs:
@@ -18,14 +22,18 @@ jobs:
 - job: CreateInfraJob
   displayName: Create Infrastructure
   variables:
+    - group: SQLDeployDemo
+    - template: ../../vars/var-common.yml
+    - name: environmentName
+      value: ${{ parameters.environmentName }}
     - name: environmentNameUpper
       value: ${{ upper(parameters.environmentName) }}
     - name: environmentNameLower
       value: ${{ lower(parameters.environmentName) }}
     - name: templateFile
-      value: '$(Pipeline.Workspace)/s/${{ parameters.templateFolderName }}/${{ parameters.templateFileName }}'
-    - name: compiledJsonFile
-      value: '${{ parameters.templateFolderName }}/compiled.json'
+      value: '$(Pipeline.Workspace)\s\${{ parameters.templateFolderName }}\${{ parameters.templateFileName }}'
+    - name: parameterFile
+      value: '$(Pipeline.Workspace)\s\${{ parameters.templateFolderName }}\${{ parameters.parameterFileName }}'
     - name: dacpacDirectoryVar
       value: '$(dacpacDirectory)'
     - name: dacpacFileNameVar
@@ -53,39 +61,18 @@ jobs:
     continueOnError: true
 
   - bash: |
-      echo "subscriptionName=$(subscriptionName)"
-      echo "resourceGroupName=$(resourceGroupName)"
-      echo "environmentNameUpper=$(environmentNameUpper)"
-      echo "environmentNameLower=$(environmentNameLower)"
-      echo "resourceGroupName=$(resourceGroupName)"
-      echo "serviceConnectionName=$(serviceConnectionName)"
-      echo "subscriptionId=$(subscriptionId)"
-      echo "location=$(location)"
-      echo "appName=$(appName)"
-      echo "appNameLower=$(appNameLower)"
-      echo "storageSku=$(storageSku)"
-      echo "keyVaultOwnerUserId=$(keyVaultOwnerUserId)"
-      echo "adDomain=$(adDomain)"
-      echo "adTenantId=$(adTenantId)"
-      echo "adClientId=$(adClientId)"
-      echo "sqlServerNamePrefix=$(sqlServerNamePrefix)"
-      echo "sqlDatabaseName=$(sqlDatabaseName)"
-      echo "sqlAdminUser=$(sqlAdminUser)"
-      echo "sqlAdminPassword=$(sqlAdminPassword)"
-      echo "sqlSkuName=$(sqlSkuName)"
-      echo "sqlSkuTier=$(sqlSkuTier)"
-      echo "sqlSkuFamily=$(sqlSkuFamily)"
-      echo "adminLoginUserId=$(adminLoginUserId)"
-      echo "adminLoginUserSid=$(adminLoginUserSid)"
-      echo "adminLoginTenantId=$(adminLoginTenantId)"
-      echo "runDateTime=$(runDateTime)"
-      echo "runDateTimeZ=$(runDateTimeZ)"
-      echo "templateFile=$(templateFile)"
-      echo "compiledJsonFile=$(compiledJsonFile)"
-      echo "Resource Group Command:"
-      echo "  az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Application=$(appName) Environment=$(environmentNameUpper)"
-      echo "Bicep Deploy Sample Command:"
-      echo "  az deployment group create -n main-deploy-$(runDateTimeZ) --resource-group $(resourceGroupName) --template-file 'main.bicep' --parameters environmentCode $(environmentNameLower) location $(location) appName $(appName) storageSku $(storageSku) keyVaultOwnerUserId $(keyVaultOwnerUserId) databaseName $(databaseName) sqlSkuName $(sqlSkuName) sqlSkuTier $(sqlSkuTier) sqlSkuFamily $(sqlSkuFamily) adminLoginUserId $(adminLoginUserId) adminLoginUserSid $(adminLoginUserSid) adminLoginTenantId $(adminLoginTenantId) runDateTime $(runDateTime) appVersion $(appVersion) appDataSource $(appDataSource) appSwaggerEnabled $(appSwaggerEnabled) appTitle '$(appTitle)' appDescription '$(appDescription)' adDomain=$(adDomain) adTenantId=$(adTenantId) adClientId=$(adClientId) apiKey 'xxxxx' openAIApiKey 'xxxxx' openAIResourceName 'xxxxxx' dallEApiKey 'xxxxx'"
+      echo "environmentName=${{ parameters.environmentName }}"
+      echo "templateFolderName=${{ parameters.templateFolderName }}"
+      echo "templateFileName=${{ parameters.templateFileName }}"
+      echo "deploymentMode=${{ parameters.deploymentMode }}"
+      echo "parameterFileName=${{ parameters.parameterFileName }}"
+
+      echo "templateFile= $(templateFile)"
+      echo "parameterFile= $(parameterFile)"
+
+      echo "##[group]Display All Environment Variables:"
+      printenv | sort
+      echo "##[endgroup]"
     displayName: 'Display Variables'
     continueOnError: true
 
@@ -95,13 +82,30 @@ jobs:
         echo "Directory of Default Working Directory:"
         tree $(System.DefaultWorkingDirectory)
         dir $(System.DefaultWorkingDirectory) /s
-    displayName: 'Display Tree'
+    displayName: 'Display Files'
     continueOnError: true
+
+  - task: qetza.replacetokens.replacetokens-task.replacetokens@6
+    displayName: 'Create Parameter File'
+    inputs:
+      sources: $(parameterFile)
+      tokenPrefix: '#{'
+      tokenSuffix: '}#'
+
+  - task: CmdLine@2
+    displayName: Display Parameter File Contents
+    continueOnError: true
+    inputs:
+      script: |
+        echo "Bicep File Name: $(templateFile)"
+        echo "##[group]Contents of Parameter File  $(parameterFile)"
+        cat  $(parameterFile)
+        echo "##[endgroup]"
 
   - task: AzureCLI@2
     displayName: 'Create Resource Group'
     inputs:
-      azureSubscription: $(subscriptionName)
+      azureSubscription: $(serviceConnectionName)
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Application=$(appName) Environment=$(environmentNameUpper)
@@ -110,96 +114,19 @@ jobs:
     displayName: 'Publish Bicep Resources'
     inputs:
       csmFile: $(templateFile)
-      overrideParameters: >
-        -appName $(appName)
-        -environmentCode $(environmentNameLower)
-        -keyVaultOwnerUserId $(keyVaultOwnerUserId)
-        -location $(location) 
-        -runDateTime $(runDateTime)
-        -storageSku $(storageSku) 
-        -sqlServerNamePrefix $(sqlServerNamePrefix)
-        -sqlDatabaseName $(sqlDatabaseName)
-        -sqlAdminUser $(sqlAdminUser)
-        -sqlAdminPassword $(sqlAdminPassword)
-        -sqlSkuName $(sqlSkuName)
-        -sqlSkuTier $(sqlSkuTier)
-        -sqlSkuFamily $(sqlSkuFamily)
-        -adminLoginUserId $(adminLoginUserId)
-        -adminLoginUserSid $(adminLoginUserSid)
-        -adminLoginTenantId $(adminLoginTenantId)
+      csmParametersFile: $(parameterFile)
       deploymentScope: 'Resource Group'
-      azureResourceManagerConnection: '$(subscriptionName)'
+      azureResourceManagerConnection: $(serviceConnectionName)
       action: 'Create Or Update Resource Group'
       resourceGroupName: '$(resourceGroupName)'
       location: '$(location)'
       templateLocation: 'Linked artifact'
-      deploymentMode: 'Incremental'
-      deploymentOutputs: armDeployment
+      deploymentMode: '${{ parameters.deploymentMode }}'  # 'Incremental' | 'Complete' | 'Validation'
 
-      # -appVersion $(appVersion)
-      # -appTitle "$(appTitle)"
-      # -appDescription "$(appDescription)"
-
-  # - bash: |
-  #     var=`echo "$(armDeployment)" | \
-  #     sed -e 's/ //g' | \
-  #     sed -e 's/}/"\n}/g' | \
-  #     sed -e 's/{/{\n"/g' | \
-  #     sed -e 's/:/":"/g'  | \
-  #     sed -e 's/,/",\n"/g' | \
-  #     sed -e 's/"}/}/g' | \
-  #     sed -e 's/}"/}/g'  | \
-  #     sed -e 's/"{/{/g'  | \
-  #     sed -e 's/\[/\[\n"/g' | \
-  #     sed -e 's/]/"\n]/g' | \
-  #     sed -e 's/"\[/\[/g' | \
-  #     sed -e 's/]"/]/g'`
-  #     value1=`echo $var | jq -r .fqdnSqlServerName.value`
-  #     echo "##vso[task.setvariable variable=targetSqlServer]$value1"
-  #     value2=`echo $var | jq -r .sqlDatabaseName.value`
-  #     echo "##vso[task.setvariable variable=targetSqlDatabase]$value2"
-  #   displayName: 'Get Bicep Output'
-  #   continueOnError: true
-
-  # - bash: |
-  #     echo "targetSqlServer=$(targetSqlServer)"
-  #     echo "targetSqlDatabase=$(targetSqlDatabase)"
-  #     echo "dacpacDirectory=$(dacpacDirectory)"
-  #     echo "dacpacFileName=$(dacpacFileName)"
-  #     echo "DefaultWorkingDirectory=$(System.DefaultWorkingDirectory)"
-  #   displayName: 'Display Bicep Output'
-  #   continueOnError: true
-
-  # - task: AzurePowerShell@5
-  #   displayName: Get access token
-  #   inputs:
-  #     azureSubscription: '$(serviceConnectionName)'
-  #     ScriptType: 'InlineScript'
-  #     azurePowerShellVersion: LatestVersion
-  #     Inline: |
-  #       $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
-  #       $sqlToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $context.Tenant.Id.ToString(), $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, "https://database.windows.net").AccessToken
-  #       Write-Host ("##vso[task.setvariable variable=SQLTOKEN;]$sqlToken")
-
-  # - ${{ if and(ne(variables.dacpacDirectoryVar, ''), ne(variables.dacpacFileNameVar, '')) }}:
-  #   # https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
-  #   # https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines
-  #   # https://erikej.github.io/sqlserver/2021/02/01/azure-sql-advanced-deployment-part4.html
-  #   - task: SqlAzureDacpacDeployment@1
-  #     displayName: Restore SQL Dacpac
-  #     inputs:
-  #       azureSubscription: '$(serviceConnectionName)'
-  #       AuthenticationType: 'connectionString'
-  #       ConnectionString: 'Data Source=$(targetSqlServer);Initial Catalog=$(targetSqlDatabase);Encrypt=true;Connect Timeout=60'
-  #       deployType: 'DacpacTask'
-  #       DeploymentAction: 'Publish'
-  #       DacpacFile: '$(System.DefaultWorkingDirectory)/$(dacpacDirectory)/$(dacpacFileName)'
-  #       AdditionalArguments: '/AccessToken:$(sqlToken)'
-  #       IpDetectionMethod: 'AutoDetect'
-
-  #   ##[error]*** Could not deploy package.
-  #   # Unable to connect to target server 'xxx.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
-  #   # Reason: An instance-specific error occurred while establishing a connection to SQL Server. Connection was denied since Deny Public Network Access is set to Yes 
-  #   # (https://docs.microsoft.com/azure/azure-sql/database/connectivity-settings#deny-public-network-access).
-  #   # To connect to this server, use the Private Endpoint from inside your virtual network (https://docs.microsoft.com/azure/sql-database/sql-database-private-endpoint-overview#how-to-set-up-private-link-for-azure-sql-database).
-  #   # The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
+  - task: CmdLine@2
+    displayName: 'Wipe Parameter File'
+    condition: always()
+    continueOnError: true
+    inputs:
+      script: |
+        echo "WIPED!" > $(parameterFile)

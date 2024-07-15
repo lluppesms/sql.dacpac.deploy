@@ -71,7 +71,8 @@ jobs:
       echo "sqlDatabaseName=$(sqlDatabaseName)"
       echo "sqlFullFileName=$(sqlFullFileName)"
       echo "logFullFileName=$(logFullFileName)"
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)'" 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
@@ -121,6 +122,10 @@ jobs:
   # ------------------------------------------------------------------------------------------------------------------------
   # Run SqlCmd utility with access token
   # ------------------------------------------------------------------------------------------------------------------------
+  # 2024-07-15 - this task is getting this warning...???
+  #   ##[warning]You're using AzureRM which will be retired soon, please schedule an update.
+  # ------------------------------------------------------------------------------------------------------------------------
+  
   - task: AzurePowerShell@5
     displayName: Run Invoke-SqlCmd
     inputs:

@@ -14,15 +14,19 @@ schedules:
     - master
 
 # ----------------------------------------------------------------------------------------------------
-parameters:
-  - name: runGHASScan
-    displayName: Run GHAS Scan
-    type: boolean
-    default: true
-  - name: runMSDevSecOpsScan
-    displayName: Run MS DevSecOps Scan
-    type: boolean
-    default: false
+# parameters:
+#   - name: runGHASScan
+#     displayName: Run GHAS Scan
+#     type: boolean
+#     default: true
+#   - name: runMSDevSecOpsScan
+#     displayName: Run MS DevSecOps Scan
+#     type: boolean
+#     default: true
+
+# ----------------------------------------------------------------------------------------------------
+variables:
+  - template: vars/var-common.yml
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -32,9 +36,9 @@ stages:
   - template: pipes/templates/scan-code-template.yml
     parameters:
       environmentName: 'DEMO'
-      appFolderName: 'src\sql.database'
-      appSolutionName: 'sql.database'
-      appProjectFolderName: 'src\sql.database\sql.database'
-      appProjectExtension: 'sqlproj'
-      runGHASScan: ${{ parameters.runGHASScan }}
-      runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
+      appFolderName: $(appFolderName)
+      appSolutionName: $(appSolutionName)
+      appProjectFolderName: $(appProjectFolderName)
+      appProjectExtension: $(appProjectExtension)
+      runGHASScan: false # ${{ parameters.runGHASScan }}
+      runMSDevSecOpsScan: true # ${{ parameters.runMSDevSecOpsScan }}

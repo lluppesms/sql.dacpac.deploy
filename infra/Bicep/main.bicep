@@ -121,6 +121,28 @@ module keyVaultSecret2 'keyvaultsecretsqlserver.bicep' = {
   }
 }
 
+module keyVaultSecret3 'keyvaultsecret.bicep' = {
+  name: 'keyVaultSecret3${deploymentSuffix}'
+  dependsOn: [ keyVaultModule, sqlDbModule ]
+  params: {
+    keyVaultName: keyVaultModule.outputs.name
+    secretName: 'sqlAdminUser'
+    secretValue: sqlAdminUser
+    existingSecretNames: keyVaultSecretList.outputs.secretNameList
+  }
+}
+
+module keyVaultSecret4 'keyvaultsecret.bicep' = {
+  name: 'keyVaultSecret4${deploymentSuffix}'
+  dependsOn: [ keyVaultModule, sqlDbModule ]
+  params: {
+    keyVaultName: keyVaultModule.outputs.name
+    secretName: 'sqlAdminPassword'
+    secretValue: sqlAdminPassword
+    existingSecretNames: keyVaultSecretList.outputs.secretNameList
+  }
+}
+
 // --------------------------------------------------------------------------------
 var fqdnSqlServer = '${sqlDbModule.outputs.serverName}${environment().suffixes.sqlServerHostname}'
 output fqdnSqlServerName string = fqdnSqlServer
