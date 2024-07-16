@@ -21,7 +21,7 @@ variables:
   - name: sqlFolderName
     value: 'src\Patch\'
   - name: sqlFileName
-    value: 'Patch-20231128.sql'
+    value: 'Patch-20240101.sql'
   - name: environmentName
     value: 'nonprod'
 

@@ -34,12 +34,12 @@ jobs:
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}
     - name: sqlFullFileName
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
-    - name: logFullFileName
-      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
     - name: testFileName1
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
     - name: testFileName2
       value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
+    - name: logFullFileName
+      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
 
   steps:
   - bash: |
@@ -113,28 +113,31 @@ jobs:
   # ------------------------------------------------------------------------------------------------------------------------
   # Run SqlCmd utility with userid/password
   # ------------------------------------------------------------------------------------------------------------------------
-  # - task: CmdLine@2
-  #   displayName: Run Sqlcmd
-  #   inputs:
-  #     filename: Sqlcmd
-  #     arguments: '-S $(fqdnServerName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -d $(sqlDatabaseName) -i $(sqlFullFileName)'
-
-  # ------------------------------------------------------------------------------------------------------------------------
-  # Run SqlCmd utility with access token
-  # ------------------------------------------------------------------------------------------------------------------------
-  # 2024-07-15 - this task is getting this warning...???
-  #   ##[warning]You're using AzureRM which will be retired soon, please schedule an update.
-  # ------------------------------------------------------------------------------------------------------------------------
-  
-  - task: AzurePowerShell@5
-    displayName: Run Invoke-SqlCmd
+  - task: CmdLine@2
+    displayName: 'Run SQLCMD'
     inputs:
-      azureSubscription: $(serviceConnectionName)
-      azurePowerShellVersion: 'LatestVersion'
-      scriptType: inlinescript
       script: |
-        $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-        Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
+        echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(sqlDatabaseName) with uid/pw, logging to $(logFullFileName)"
+        Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(sqlDatabaseName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
+    continueOnError: true
+    
+  # # ------------------------------------------------------------------------------------------------------------------------
+  # # Run Powershell SqlCmd utility with access token
+  # # Notes:
+  # #   Works using an access token...
+  # #   Logging doesn't work - can't find the file
+  # #   Gets this warning:
+  # #      ## [warning] You're using AzureRM which will be retired soon, please schedule an update.
+  # # ------------------------------------------------------------------------------------------------------------------------
+  # - task: AzurePowerShell@5
+  #   displayName: Run Invoke-SqlCmd
+  #   inputs:
+  #     azureSubscription: $(serviceConnectionName)
+  #     azurePowerShellVersion: 'LatestVersion'
+  #     scriptType: inlinescript
+  #     script: |
+  #       $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+  #       Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
     
     # Some things I've tried to get this output...
     # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String

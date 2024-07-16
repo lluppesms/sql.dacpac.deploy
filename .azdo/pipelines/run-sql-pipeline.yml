@@ -41,11 +41,11 @@ stages:
     parameters:
       environments: ['DEMO']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
-      sqlFileName: 'Patch-20231128.sql'
+      sqlFileName: 'Patch-20240101.sql'
 
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO','QA']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
-      sqlFileName: 'Patch-20231128.sql'
+      sqlFileName: 'Patch-20240101.sql'
