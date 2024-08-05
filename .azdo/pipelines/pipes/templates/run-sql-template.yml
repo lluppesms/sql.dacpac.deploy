@@ -12,6 +12,8 @@ parameters:
   default: ''
 - name: sqlFileName
   default: ''
+- name: runInDatabase
+  default: ''
 
 # ------------------------------------------------------------------------------------------------------------------------
 jobs:
@@ -28,6 +30,8 @@ jobs:
       value: ${{ lower(parameters.environmentName) }}
     - name: sqlServerName
       value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
+    - name: runInDatabase
+      value: ${{ parameters.runInDatabase }}
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
     - name: sqlFullFolderName
@@ -68,11 +72,11 @@ jobs:
       echo "subscriptionName=$(subscriptionName)"
       echo "sqlServerName=$(sqlServerName)"
       echo "fqdnServerName=$(fqdnServerName)"
-      echo "sqlDatabaseName=$(sqlDatabaseName)"
+      echo "runInDatabase=$(runInDatabase)"
       echo "sqlFullFileName=$(sqlFullFileName)"
       echo "logFullFileName=$(logFullFileName)"
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(sqlDatabaseName)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(runInDatabase)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
+      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(runInDatabase)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
     displayName: 'Display variables and CMD'
     continueOnError: true
 
@@ -117,8 +121,8 @@ jobs:
     displayName: 'Run SQLCMD'
     inputs:
       script: |
-        echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(sqlDatabaseName) with uid/pw, logging to $(logFullFileName)"
-        Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(sqlDatabaseName) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
+        echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(runInDatabase) with uid/pw, logging to $(logFullFileName)"
+        Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
     continueOnError: true
     
   # # ------------------------------------------------------------------------------------------------------------------------
@@ -137,10 +141,10 @@ jobs:
   #     scriptType: inlinescript
   #     script: |
   #       $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-  #       Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
+  #       Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
     
     # Some things I've tried to get this output...
-    # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
+    # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
     # Write-Verbose "$cmdOutput" -Verbose
     # echo $cmdOutput > $(logFullFileName)
     # Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"

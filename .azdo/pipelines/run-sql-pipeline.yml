@@ -25,10 +25,14 @@ trigger:
 
 # ----------------------------------------------------------------------------------------------------
 parameters:
-  - name: deployMultiStage
-    displayName: Multi-Stage Deploy
-    type: boolean
-    default: false
+  - name: typeOfDeploy
+    displayName: Type of Deploy
+    type: string
+    default: 'SINGLE-ENVIRONMENT'
+    values:
+      - SINGLE-ENVIRONMENT
+      - MULTI-ENVIRONMENTS
+      - DB-COPY
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -36,16 +40,27 @@ variables:
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
+- ${{ if eq(parameters.typeOfDeploy, 'SINGLE-ENVIRONMENT') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: 'Patch-20240101.sql'
+      runInDatabase: 'dadabase'
 
-- ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
+- ${{ if eq(parameters.typeOfDeploy, 'MULTI-ENVIRONMENTS') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO','QA']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: 'Patch-20240101.sql'
+      runInDatabase: 'dadabase'
+
+- ${{ if eq(parameters.typeOfDeploy, 'DB-COPY') }}:
+  - template: pipes/run-sql-pipe.yml
+    parameters:
+      environments: ['DEMO']
+      sqlFolderName: 'src\sql.database\sql.database\Patch\'
+      sqlFileName: 'DbCopy-20240805.sql'
+      runInDatabase: 'master'
+

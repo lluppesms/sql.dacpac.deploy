@@ -9,6 +9,8 @@ parameters:
   default: ''
 - name: sqlFileName
   default: ''
+- name: runInDatabase
+  default: ''
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -21,3 +23,4 @@ stages:
         environmentName: ${{ environmentName }}
         sqlFolderName: ${{ parameters.sqlFolderName }}
         sqlFileName: ${{ parameters.sqlFileName }}
+        runInDatabase: ${{ parameters.runInDatabase }}
