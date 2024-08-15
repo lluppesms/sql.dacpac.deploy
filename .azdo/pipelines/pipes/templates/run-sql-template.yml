@@ -2,8 +2,8 @@
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
 # ------------------------------------------------------------------------------------------------------------------------
-# NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get that to work.
-# Therefore, I have no good way in the pipeline to know if the Invoke succeeded or failed.
+# NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get some of them to work.
+# The one that works is the SqlCmd command, but it requires a username and password, which is not ideal.
 # ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
@@ -75,8 +75,7 @@ jobs:
       echo "runInDatabase=$(runInDatabase)"
       echo "sqlFullFileName=$(sqlFullFileName)"
       echo "logFullFileName=$(logFullFileName)"
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(runInDatabase)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
-      echo "CMD: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '$(runInDatabase)' -AccessToken '$token' -InputFile '$(sqlFullFileName)' -verbose | Out-File -filePath $(logFullFileName)" 
+      echo "CMD: Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)"
     displayName: 'Display variables and CMD'
     continueOnError: true
 
@@ -128,9 +127,9 @@ jobs:
   # # ------------------------------------------------------------------------------------------------------------------------
   # # Run Powershell SqlCmd utility with access token
   # # Notes:
-  # #   Works using an access token...
-  # #   Logging doesn't work - can't find the file
-  # #   Gets this warning:
+  # #   This works and executes using an access token...
+  # #   However, logging doesn't work - I can't find the output file
+  # #   Also, it gets this warning:
   # #      ## [warning] You're using AzureRM which will be retired soon, please schedule an update.
   # # ------------------------------------------------------------------------------------------------------------------------
   # - task: AzurePowerShell@5
@@ -143,7 +142,7 @@ jobs:
   #       $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
   #       Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
     
-    # Some things I've tried to get this output...
+    # Some things I've tried to get this output that didn't work...
     # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
     # Write-Verbose "$cmdOutput" -Verbose
     # echo $cmdOutput > $(logFullFileName)
