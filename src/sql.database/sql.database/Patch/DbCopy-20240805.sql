@@ -1,4 +1,5 @@
-﻿PRINT 'Running: USE master'
+﻿-- https://learn.microsoft.com/en-us/azure/azure-sql/database/database-copy
+PRINT 'Running: USE master'
 USE master
 GO
 
