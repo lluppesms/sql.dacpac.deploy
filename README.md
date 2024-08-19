@@ -8,9 +8,9 @@ This repository will demonstrate how to deploy an Azure SQL Server instance usin
 
 Follow these steps to publish and update a database schema to an existing Azure SQL Server using Azure DevOps pipelines:
 
-1. Create a SQL database in your server.
+1. Create a SQL database on your local server or desktop.
 
-1. Create a new `SQL Server Database Project` in Visual Studio with the SQL Server Data Tools installed. 
+1. Create a new `SQL Server Database Project` in Visual Studio with the SQL Server Data Tools installed.
   
     > If the intended deploy target is Azure SQL, go into the project properties and set the Target Platform to "Microsoft Azure SQL Database".
 
@@ -18,7 +18,7 @@ Follow these steps to publish and update a database schema to an existing Azure 
 
 1. If an initial set of data is desired in the database, add a post deployment script to the project by right clicking on the `dbo` folder and selecting `Add` and then `Script...` and then selecting Post-Deployment script.  Name the script something like `Post-Deployment.sql` and add the desired SQL commands to populate the database with data.
 
-    > Note: The script will be run **EVERY TIME** the database is created or updated, so be sure the script is idempotent and will not create multiple versions of the initial data.
+    > Note: The script will be run **EVERY TIME** the database is created or updated, so be sure the script is [**idempotent**](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying?tabs=dotnet-core-cli#idempotent-sql-scripts) and will not create multiple versions of the initial data.
 
 1. Check the updated project code into the repository and then run one of the pipelines to build the DACPAC file and deploy the database to the target server.
 
