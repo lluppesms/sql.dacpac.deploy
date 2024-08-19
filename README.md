@@ -34,7 +34,7 @@ See the [.azdo/pipeline/readme.md](.azdo/pipelines/readme.md) file for details o
 
 ## Additional Notes
 
-- This project is focused on database **SCHEMA** changes, not on changing to the actual **DATA** in a database (except for the initial data populate).
+- This project is focused on database **SCHEMA** changes, not on changing to the actual **DATA** in a database (except for the initial data populate), although there is an example of running scripts as part of the update and the option to run a pipeline that just [runs a script](.azdo/pipelines/run-sql-pipeline.yml) .
 
 ## References
 
