@@ -24,7 +24,7 @@ Follow these steps to publish and update a database schema to an existing Azure 
 
     > Note: the folder, solution, and project name are hard-coded into the pipelines, so if those are changed, the pipelines will need to be updated.
 
-1. When changes are made to the database, use the Schema Compare tool to compare the source database to the database project and then update the project with the changes.
+1. When changes are made to the database, use the Schema Compare tool to compare the source database to the database project and then update the project with the changes, check in the code, and run one of the pipelines again to publish your changes.
 
     > Note: If publishing to Azure SQL, the Schema Compare options should be set to ignore Database Roles and Users, as those do not transfer well to Azure SQL. Check the changes into the repository and run the pipeline again to deploy the changes to the target server.
 
