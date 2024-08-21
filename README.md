@@ -51,10 +51,9 @@ See the [.azdo/pipeline/readme.md](.azdo/pipelines/readme.md) file for details o
 
 <!-- Other References
 
-[SO: Connect with MI in a Pipeline Question](https://stackoverflow.com/questions/55637169/invoke-sqlcmd-with-aad-authentication)
+- [SO: Connect with MI in a Pipeline Question](https://stackoverflow.com/questions/55637169/invoke-sqlcmd-with-aad-authentication)
 
-[SO: Connect with MI in a Pipeline Question](https://markallison.co.uk/blog/connect-mi-with-managedidentity/)
-
+- [SO: Connect with MI in a Pipeline Question](https://markallison.co.uk/blog/connect-mi-with-managedidentity/)
 
 - [Blog: Automatically Deploy your Database with Dacpac Packages](https://programmingwithwolfgang.com/deploy-dacpac-linux-azure-devops/)
 
