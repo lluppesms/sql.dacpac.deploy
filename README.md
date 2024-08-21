@@ -50,6 +50,16 @@ See the [.azdo/pipeline/readme.md](.azdo/pipelines/readme.md) file for details o
 - [YML Task: SqlAzureDacpacDeployment@1](https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/sql-azure-dacpac-deployment-v1?view=azure-pipelines)
 
 <!-- Other References
+
+[SO: Connect with MI in a Pipeline Question](https://stackoverflow.com/questions/55637169/invoke-sqlcmd-with-aad-authentication)
+
+[SO: Connect with MI in a Pipeline Question](https://markallison.co.uk/blog/connect-mi-with-managedidentity/)
+
+
 - [Blog: Automatically Deploy your Database with Dacpac Packages](https://programmingwithwolfgang.com/deploy-dacpac-linux-azure-devops/)
+
 - [Deploying DB changes using SSDT via Azure DevOps](https://medium.com/synsoft-global/deploying-db-changes-using-ssdt-via-azure-devops-3907f326e80d) 
+
+- [Blog: Unleashing the Power of Managed Identity: Running SQL Scripts in Azure DevOps Pipeline](https://dev.to/shekhartarare/unleashing-the-power-of-managed-identity-running-sql-scripts-in-azure-devops-pipeline-311f)
+
 -->
