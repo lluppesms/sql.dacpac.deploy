@@ -14,6 +14,8 @@ parameters:
   default: ''
 - name: runInDatabase
   default: ''
+- name: loginAccountType
+  default: 'SVC_PRINCIPAL'
 
 # ------------------------------------------------------------------------------------------------------------------------
 jobs:
@@ -113,34 +115,38 @@ jobs:
   #     scriptLocation: 'inlineScript'
   #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group $(resourceGroupName) --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
 
-  # ------------------------------------------------------------------------------------------------------------------------
-  # Run SqlCmd utility with userid/password
-  # ------------------------------------------------------------------------------------------------------------------------
-  - task: CmdLine@2
-    displayName: 'Run SQLCMD'
-    inputs:
-      script: |
-        echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(runInDatabase) with uid/pw, logging to $(logFullFileName)"
-        Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
-    continueOnError: true
+  # # ------------------------------------------------------------------------------------------------------------------------
+  # # Run SqlCmd utility with userid/password
+  # # ------------------------------------------------------------------------------------------------------------------------
+  - ${{ if eq(lower(parameters.loginAccountType), 'local_sql') }}:
+    - task: CmdLine@2
+      displayName: 'Run SQLCMD - Local User'
+      inputs:
+        script: |
+          echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(runInDatabase) with uid/pw, logging to $(logFullFileName)"
+          Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
+      continueOnError: true
     
   # # ------------------------------------------------------------------------------------------------------------------------
   # # Run Powershell SqlCmd utility with access token
   # # Notes:
   # #   This works and executes using an access token...
-  # #   However, logging doesn't work - I can't find the output file
-  # #   Also, it gets this warning:
-  # #      ## [warning] You're using AzureRM which will be retired soon, please schedule an update.
+  # #   However, LOGGING doesn't work - I can't find the output file!
+  # #   See: https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps
+  # #   "This cmdlet does not support the use of commands that are primarily related to interactive script editing. The commands not supported include :!!, :connect, :error, :out, :ed, :list, :listvar, :reset, :perftrace, and :serverlist.""
+  # #   But it says this should work...!
+  # #     Invoke-Sqlcmd -InputFile "C:\ScriptFolder\TestSqlCmd.sql" | Out-File -FilePath "C:\ScriptFolder\TestSqlCmd.rpt"
   # # ------------------------------------------------------------------------------------------------------------------------
-  # - task: AzurePowerShell@5
-  #   displayName: Run Invoke-SqlCmd
-  #   inputs:
-  #     azureSubscription: $(serviceConnectionName)
-  #     azurePowerShellVersion: 'LatestVersion'
-  #     scriptType: inlinescript
-  #     script: |
-  #       $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-  #       Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)
+  - ${{ if eq(lower(parameters.loginAccountType), 'svc_principal') }}:
+    - task: AzurePowerShell@5
+      displayName: 'Run Invoke-SqlCmd - SvcPrin'
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        azurePowerShellVersion: 'LatestVersion'
+        scriptType: inlinescript
+        script: |
+          $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
+          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -FilePath "$(logFullFileName)"
     
     # Some things I've tried to get this output that didn't work...
     # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String

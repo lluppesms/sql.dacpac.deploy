@@ -5,6 +5,19 @@
 #   CREATE USER yourSP FROM EXTERNAL PROVIDER
 #   ALTER ROLE db_owner ADD MEMBER yourSP
 # ----------------------------------------------------------------------------------------------------
+# If you don't you might see this error:
+#   ##[error]Unable to connect to target server 'xxxdacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
+#   ##[error]Login failed for user '<token-identified principal>'.
+#   ##[error]The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
+# ----------------------------------------------------------------------------------------------------
+# Script to display role members:
+#   SELECT DP1.name AS DatabaseRoleName, isnull (DP2.name, 'No members') AS DatabaseUserName   
+#   FROM sys.database_role_members AS DRM  
+#   RIGHT OUTER JOIN sys.database_principals AS DP1 ON DRM.role_principal_id = DP1.principal_id  
+#   LEFT OUTER JOIN sys.database_principals AS DP2 ON DRM.member_principal_id = DP2.principal_id  
+#   WHERE DP1.type = 'R' and DP1.name = 'db_owner'
+#   ORDER BY DP1.name
+# ----------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
   default:  'DEMO'

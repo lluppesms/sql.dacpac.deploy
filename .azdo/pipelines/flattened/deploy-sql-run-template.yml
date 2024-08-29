@@ -92,7 +92,7 @@ jobs:
     inputs:
       azureSubscription: $(serviceConnectionName)
       azurePowerShellVersion: 'LatestVersion'
-      scriptType: inlinescript
+      scriptType: InlineScript
       script: |
         $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
         Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(sqlDatabaseName)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -filePath $(logFullFileName)

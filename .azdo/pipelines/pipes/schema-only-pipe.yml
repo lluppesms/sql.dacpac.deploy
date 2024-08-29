@@ -11,6 +11,8 @@ parameters:
   default: ''
 - name: appProjectName
   default: ''
+- name: loginAccountType
+  default: 'SVC_PRINCIPAL'
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -35,3 +37,4 @@ stages:
         environmentName: ${{ environmentName }}
         artifactName: 'dacpac'
         appProjectName: ${{ parameters.appProjectName }}
+        loginAccountType: ${{ parameters.loginAccountType }}

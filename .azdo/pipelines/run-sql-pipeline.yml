@@ -33,6 +33,13 @@ parameters:
       - SINGLE-ENVIRONMENT
       - MULTI-ENVIRONMENTS
       - DB-COPY
+  - name: loginAccountType
+    displayName: Login Account Type
+    default: 'SVC_PRINCIPAL'
+    values:
+      - LOCAL_SQL
+      - SVC_PRINCIPAL
+    type: string
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -47,6 +54,7 @@ stages:
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: 'Patch-20240101.sql'
       runInDatabase: 'dadabase'
+      loginAccountType: ${{ parameters.loginAccountType }}
 
 - ${{ if eq(parameters.typeOfDeploy, 'MULTI-ENVIRONMENTS') }}:
   - template: pipes/run-sql-pipe.yml
@@ -55,6 +63,7 @@ stages:
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: 'Patch-20240101.sql'
       runInDatabase: 'dadabase'
+      loginAccountType: ${{ parameters.loginAccountType }}
 
 - ${{ if eq(parameters.typeOfDeploy, 'DB-COPY') }}:
   - template: pipes/run-sql-pipe.yml
@@ -63,4 +72,5 @@ stages:
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: 'DbCopy-20240805.sql'
       runInDatabase: 'master'
+      loginAccountType: ${{ parameters.loginAccountType }}
 

@@ -1,9 +1,23 @@
 # ----------------------------------------------------------------------------------------------------
 # Template to deploy a SQL Dacpac File to a SQL Database
+# ----------------------------------------------------------------------------------------------------
 # Unless you are using a local user/password, you must find the service principal name that is running
 # your pipeline and execute these commands in the Azure SQL Database to grant access:
 #   CREATE USER yourSP FROM EXTERNAL PROVIDER
 #   ALTER ROLE db_owner ADD MEMBER yourSP
+# ----------------------------------------------------------------------------------------------------
+# If you don't you might see this error:
+#   ##[error]Unable to connect to target server 'xxxdacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
+#   ##[error]Login failed for user '<token-identified principal>'.
+#   ##[error]The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
+# ----------------------------------------------------------------------------------------------------
+# Script to display role members:
+#   SELECT DP1.name AS DatabaseRoleName, isnull (DP2.name, 'No members') AS DatabaseUserName   
+#   FROM sys.database_role_members AS DRM  
+#   RIGHT OUTER JOIN sys.database_principals AS DP1 ON DRM.role_principal_id = DP1.principal_id  
+#   LEFT OUTER JOIN sys.database_principals AS DP2 ON DRM.member_principal_id = DP2.principal_id  
+#   WHERE DP1.type = 'R' and DP1.name = 'db_owner'
+#   ORDER BY DP1.name
 # ----------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
@@ -12,6 +26,8 @@ parameters:
   default: 'dacpac'
 - name: appProjectName
   default: ''
+- name: loginAccountType
+  default: 'SVC_PRINCIPAL'
 
 # ------------------------------------------------------------------------------------------------------------------------
 jobs:
@@ -67,36 +83,47 @@ jobs:
         dir $(System.ArtifactsDirectory) /s
     continueOnError: true
   
-  # On 2024-07-15, This "servicePrincipal" step failed and started getting this error...:
-  #   ##[error]*** Could not deploy package.
-  #   ##[error]Unable to connect to target server 'xxxdacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
-  #   ##[error]Login failed for user '<token-identified principal>'.
-  #   ##[error]The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
-  
-  # # this "servicePrincipal" login type logs in using some identity magic
-  - task: SqlAzureDacpacDeployment@1
-    displayName: Deploy DACPAC - SvcPrin
-    inputs:
-      azureSubscription: $(serviceConnectionName)
-      ServerName: $(fqdnServerName)
-      DatabaseName: $(sqlDatabaseName)
-      DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-      AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-      DeleteFirewallRule: false
-    continueOnError: true
+  # # -- this looks like it should work, but I have not been able to verify that it actually worked...   
+  # # See: https://stackoverflow.com/questions/53422395/how-to-get-the-ip-address-for-azure-devops-hosted-agents-to-add-to-the-white-lis
+  # # - task: AzurePowerShell@5
+  # #   displayName: 'Add buildserver public ip'
+  # #   inputs:
+  # #     azureSubscription: $(serviceConnectionName)
+  # #     ScriptType: InlineScript
+  # #     azurePowerShellVersion: LatestVersion
+  # #     script: |
+  # #       $ip = (Invoke-WebRequest -uri "http://ifconfig.me/ip").Content
+  # #       Write-Output "Adding FW Rule for Agent IP: $ip"
+  # #       Write-Output "EXECUTING New-AzSqlServerFirewallRule -ResourceGroupName $resourceGroupName -ServerName $sqlServerName -FirewallRuleName "azuredevopsagent" -StartIpAddress $ip -EndIpAddress $ip"
+  # #       New-AzSqlServerFirewallRule -ResourceGroupName $resourceGroupName -ServerName $sqlServerName -FirewallRuleName "azuredevopsagent" -StartIpAddress $ip -EndIpAddress $ip
+
+  # # # this "servicePrincipal" login type logs in using some identity magic
+  - ${{ if eq(lower(parameters.loginAccountType), 'svc_principal') }}:
+    - task: SqlAzureDacpacDeployment@1
+      displayName: Deploy DACPAC - SvcPrin
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        ServerName: $(fqdnServerName)
+        DatabaseName: $(sqlDatabaseName)
+        DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+        AuthenticationType: 'servicePrincipal' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+        DeleteFirewallRule: false
+      continueOnError: true
 
   # this "server" login type logs in as a local sql user with a name and password
-  # - task: SqlAzureDacpacDeployment@1
-  #   displayName: Deploy DACPAC - Local User
-  #   inputs:
-  #     azureSubscription: $(serviceConnectionName)
-  #     ServerName: $(fqdnServerName)
-  #     DatabaseName: $(sqlDatabaseName)
-  #     DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
-  #     AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
-  #     SqlUsername: '$(sqlAdminUser)'
-  #     SqlPassword: '$(sqlAdminPassword)'
-  #     DeleteFirewallRule: false
+  - ${{ if eq(lower(parameters.loginAccountType), 'local_sql') }}:
+    - task: SqlAzureDacpacDeployment@1
+      displayName: Deploy DACPAC - Local User
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        ServerName: $(fqdnServerName)
+        DatabaseName: $(sqlDatabaseName)
+        DacpacFile: '$(System.ArtifactsDirectory)\${{ parameters.artifactName }}\${{ parameters.appProjectName }}.dacpac'
+        AuthenticationType: 'server' # 'server' | 'aadAuthenticationPassword' | 'aadAuthenticationIntegrated' | 'connectionString' | 'servicePrincipal'.  Default: server
+        SqlUsername: '$(sqlAdminUser)'
+        SqlPassword: '$(sqlAdminPassword)'
+        DeleteFirewallRule: false
+      continueOnError: true
 
   # # this "connectionstring" login type uses the service principal that is running the pipeline to go get an access token, then logs into the database with that
   # - task: AzurePowerShell@5
