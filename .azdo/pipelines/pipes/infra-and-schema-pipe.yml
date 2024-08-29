@@ -19,6 +19,8 @@ parameters:
   default: 'false'
 - name: runMSDevSecOpsScan
   default: 'false'
+- name: loginAccountType
+  default: 'SVC_PRINCIPAL'
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -68,3 +70,4 @@ stages:
         environmentName: ${{ environmentName }}
         artifactName: 'dacpac'
         appProjectName: ${{ parameters.appProjectName }}
+        loginAccountType: ${{ parameters.loginAccountType }}

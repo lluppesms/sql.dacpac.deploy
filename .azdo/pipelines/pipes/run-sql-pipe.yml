@@ -11,6 +11,8 @@ parameters:
   default: ''
 - name: runInDatabase
   default: ''
+- name: loginAccountType
+  default: 'SVC_PRINCIPAL'
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -24,3 +26,4 @@ stages:
         sqlFolderName: ${{ parameters.sqlFolderName }}
         sqlFileName: ${{ parameters.sqlFileName }}
         runInDatabase: ${{ parameters.runInDatabase }}
+        loginAccountType: ${{ parameters.loginAccountType }}

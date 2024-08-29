@@ -34,6 +34,13 @@ parameters:
     displayName: Run MS DevSecOps Scan
     type: boolean
     default: false
+  - name: loginAccountType
+    displayName: Login Account Type
+    default: 'SVC_PRINCIPAL'
+    values:
+      - LOCAL_SQL
+      - SVC_PRINCIPAL
+    type: string
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -53,6 +60,7 @@ stages:
       appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}
+      loginAccountType: ${{ parameters.loginAccountType }}
 
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/infra-and-schema-pipe.yml
@@ -65,3 +73,4 @@ stages:
       appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
       runGHASScan: ${{ parameters.runGHASScan }}
+      loginAccountType: ${{ parameters.loginAccountType }}

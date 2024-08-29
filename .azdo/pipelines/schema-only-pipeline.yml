@@ -29,6 +29,13 @@ parameters:
     displayName: Multi-Stage Deploy
     type: boolean
     default: false
+  - name: loginAccountType
+    displayName: Login Account Type
+    default: 'SVC_PRINCIPAL'
+    values:
+      - LOCAL_SQL
+      - SVC_PRINCIPAL
+    type: string
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -44,6 +51,7 @@ stages:
       appFolderName: $(appFolderName)
       appSolutionName: $(appSolutionName)
       appProjectName: $(appProjectName)
+      loginAccountType: ${{ parameters.loginAccountType }}
 
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/schema-only-pipe.yml
@@ -52,3 +60,4 @@ stages:
       appFolderName: $(appFolderName)
       appSolutionName: $(appSolutionName)
       appProjectName: $(appProjectName)
+      loginAccountType: ${{ parameters.loginAccountType }}
