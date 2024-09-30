@@ -13,6 +13,10 @@ parameters:
   default: ''
 - name: loginAccountType
   default: 'SVC_PRINCIPAL'
+- name: resourceGroupName
+  default: ''
+- name: databaseCopyName
+  default: ''
 
 # ----------------------------------------------------------------------------------------------------
 stages:
@@ -27,3 +31,5 @@ stages:
         sqlFileName: ${{ parameters.sqlFileName }}
         runInDatabase: ${{ parameters.runInDatabase }}
         loginAccountType: ${{ parameters.loginAccountType }}
+        resourceGroupName: ${{ parameters.resourceGroupName }}
+        databaseCopyName: ${{ parameters.databaseCopyName }}

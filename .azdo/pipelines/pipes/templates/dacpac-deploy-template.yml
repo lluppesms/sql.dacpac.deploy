@@ -5,6 +5,7 @@
 # your pipeline and execute these commands in the Azure SQL Database to grant access:
 #   CREATE USER yourSP FROM EXTERNAL PROVIDER
 #   ALTER ROLE db_owner ADD MEMBER yourSP
+# See also https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure?view=azuresql&tabs=azure-cli#provision-microsoft-entra-admin-sql-database
 # ----------------------------------------------------------------------------------------------------
 # If you don't you might see this error:
 #   ##[error]Unable to connect to target server 'xxxdacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.

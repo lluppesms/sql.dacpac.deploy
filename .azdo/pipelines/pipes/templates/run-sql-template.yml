@@ -1,9 +1,12 @@
 # ------------------------------------------------------------------------------------------------------------------------
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
-# ------------------------------------------------------------------------------------------------------------------------
-# NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get some of them to work.
-# The one that works is the SqlCmd command, but it requires a username and password, which is not ideal.
+# ----------------------------------------------------------------------------------------------------
+# Unless you are using a local user/password, you must find the service principal name that is running
+# your pipeline and execute these commands in the Azure SQL Database to grant access:
+#   CREATE USER yourSP FROM EXTERNAL PROVIDER
+#   ALTER ROLE db_owner ADD MEMBER yourSP
+# See also https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure
 # ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
@@ -16,6 +19,10 @@ parameters:
   default: ''
 - name: loginAccountType
   default: 'SVC_PRINCIPAL'
+- name: resourceGroupName
+  default: ''
+- name: databaseCopyName
+  default: ''
 
 # ------------------------------------------------------------------------------------------------------------------------
 jobs:
@@ -32,26 +39,30 @@ jobs:
       value: ${{ lower(parameters.environmentName) }}
     - name: sqlServerName
       value: $(sqlServerNamePrefix)${{ lower(parameters.environmentName) }}
-    - name: runInDatabase
-      value: ${{ parameters.runInDatabase }}
     - name: fqdnServerName
       value: $(sqlServerName).database.windows.net
     - name: sqlFullFolderName
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}
     - name: sqlFullFileName
       value: $(System.DefaultWorkingDirectory)\${{ parameters.sqlFolderName }}${{ parameters.sqlFileName }}
-    - name: testFileName1
-      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-1.txt
-    - name: testFileName2
-      value: $(Build.ArtifactStagingDirectory)\Output\Example-Output-2.txt
-    - name: logFullFileName
-      value: $(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.log
+
+    - name: invokeSQLScriptFullName
+      value: $(System.DefaultWorkingDirectory)\scripts\InvokeSqlCommand.ps1
+    - name: azDbCopyScriptFullName
+      value: $(System.DefaultWorkingDirectory)\scripts\azDbCopyCommand.ps1
+
+    - name: dummyOutputFile
+      value: $(Build.ArtifactStagingDirectory)\Output\Sample-Output-1.txt
 
   steps:
   - bash: |
-      resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
-      echo "resourceGroupName=$resourceGroupName"
-      echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
+      runDateTime=$(echo $(date '+%Y%m%d%H%M'))
+      echo "##vso[task.setvariable variable=runDateTime]$runDateTime"
+      echo "runDateTime=$runDateTime"
+                                  
+      logFullFileName=$(echo "$(Build.ArtifactStagingDirectory)\Output\${{ parameters.sqlFileName }}.$runDateTime.log")
+      echo "##vso[task.setvariable variable=logFullFileName]$logFullFileName"
+      echo "logFullFileName=$logFullFileName"
     displayName: 'Create Variables'
     continueOnError: true
 
@@ -63,31 +74,35 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)
         md Output
         cd Output
-        echo "Dummy file to create one output to publish..." > $(testFileName1)
+        echo "Sample file so that publish command won't fail..." > $(exampleOutputFile)
         cd ..
       errorActionPreference: 'continue'
       failOnStderr: false
 
   - bash: |
-      echo "resourceGroupName=$(resourceGroupName)"
+      echo "resourceGroupName=${{ parameters.resourceGroupName }}"
       echo "serviceConnectionName=$(serviceConnectionName)"
-      echo "subscriptionName=$(subscriptionName)"
       echo "sqlServerName=$(sqlServerName)"
       echo "fqdnServerName=$(fqdnServerName)"
-      echo "runInDatabase=$(runInDatabase)"
+      echo "runInDatabase=${{ parameters.runInDatabase }}"
+      echo "DatabaseToCopy=${{ parameters.runInDatabase }}"
       echo "sqlFullFileName=$(sqlFullFileName)"
       echo "logFullFileName=$(logFullFileName)"
-      echo "CMD: Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)"
+      echo "logFullFileName=$(logFullFileName)"
+      echo "invokeSQLScriptFullName=$(invokeSQLScriptFullName)"
+      echo "azDbCopyScriptFullName=$(azDbCopyScriptFullName)"
+      echo "CMD: Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d ${{ parameters.runInDatabase }} -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)"
+      echo "PS: Invoke-SqlCmd -ServerInstance '$(fqdnServerName)' -Database '${{ parameters.runInDatabase }}' -AccessToken 'xxxxx' -InputFile '$(sqlFullFileName)' -Verbose | Out-File -FilePath $(logFullFileName)"
     displayName: 'Display variables and CMD'
     continueOnError: true
 
   - task: CmdLine@2
+    displayName: 'List Input Files'
     inputs:
       script: |
         echo "SQL File: $(sqlFullFileName)"
         echo "Directory of $(sqlFullFolderName)"
         dir $(sqlFullFolderName) /s
-    displayName: 'Display SQL Files'
     continueOnError: true
 
   # ------------------------------------------------------------------------------------------------------------------------
@@ -100,7 +115,7 @@ jobs:
   #     azureSubscription: $(serviceConnectionName)
   #     ScriptType: filePath
   #     ScriptPath: '$(Build.SourcesDirectory)\scripts\SetAzureFirewallRule.ps1'
-  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName) -SubscriptionName "$(subscriptionName)"'
+  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName ${{ parameters.resourceGroupName }} -SubscriptionName "$(serviceConnectionName)"'
   #     azurePowerShellVersion: LatestVersion
   #   continueOnError: true
 
@@ -113,49 +128,65 @@ jobs:
   #     azureSubscription: ${{ variables.serviceEndpointName }}
   #     scriptType: 'pscore'
   #     scriptLocation: 'inlineScript'
-  #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group $(resourceGroupName) --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
+  #     inlineScript: 'az sql server firewall-rule create --name TestRule --resource-group ${{ parameters.resourceGroupName }} --server $(sqlServerName) --end-ip-address 192.168.60.236 --start-ip-address 192.168.60.236'
 
-  # # ------------------------------------------------------------------------------------------------------------------------
-  # # Run SqlCmd utility with userid/password
-  # # ------------------------------------------------------------------------------------------------------------------------
+  # ------------------------------------------------------------------------------------------------------------------------
+  # Run SqlCmd utility with SQL Userid/Password
+  # ------------------------------------------------------------------------------------------------------------------------
   - ${{ if eq(lower(parameters.loginAccountType), 'local_sql') }}:
     - task: CmdLine@2
-      displayName: 'Run SQLCMD - Local User'
+      displayName: Run SQLCMD as SQL User
       inputs:
         script: |
-          echo "Run $(sqlFullFileName) on $(fqdnServerName) / $(runInDatabase) with uid/pw, logging to $(logFullFileName)"
-          Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d $(runInDatabase) -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
+          echo "Run $(sqlFullFileName) on $(fqdnServerName) / ${{ parameters.runInDatabase }} with uid/pw, logging to $(logFullFileName)"
+          Sqlcmd -i $(sqlFullFileName) -S $(fqdnServerName) -d ${{ parameters.runInDatabase }} -U $(sqlAdminUser) -P $(sqlAdminPassword) -o $(logFullFileName)
       continueOnError: true
-    
-  # # ------------------------------------------------------------------------------------------------------------------------
-  # # Run Powershell SqlCmd utility with access token
-  # # Notes:
-  # #   This works and executes using an access token...
-  # #   However, LOGGING doesn't work - I can't find the output file!
-  # #   See: https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps
-  # #   "This cmdlet does not support the use of commands that are primarily related to interactive script editing. The commands not supported include :!!, :connect, :error, :out, :ed, :list, :listvar, :reset, :perftrace, and :serverlist.""
-  # #   But it says this should work...!
-  # #     Invoke-Sqlcmd -InputFile "C:\ScriptFolder\TestSqlCmd.sql" | Out-File -FilePath "C:\ScriptFolder\TestSqlCmd.rpt"
-  # # ------------------------------------------------------------------------------------------------------------------------
-  - ${{ if eq(lower(parameters.loginAccountType), 'svc_principal') }}:
-    - task: AzurePowerShell@5
-      displayName: 'Run Invoke-SqlCmd - SvcPrin'
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  # Run AzSqlDatabaseCopy command in Pipeline Service Connection context
+  #   See: https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps
+  # ------------------------------------------------------------------------------------------------------------------------
+  - ${{ if and(eq(lower(parameters.loginAccountType), 'svc_principal'), eq(lower(parameters.sqlFileName), 'DBCOPY')) }}:
+    - task: AzurePowerShell@4
+      displayName: DBCopy PowerShell as Service Principal
       inputs:
         azureSubscription: $(serviceConnectionName)
         azurePowerShellVersion: 'LatestVersion'
-        scriptType: inlinescript
-        script: |
-          $token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-          Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-File -FilePath "$(logFullFileName)"
-    
-    # Some things I've tried to get this output that didn't work...
-    # $cmdOutput = Invoke-SqlCmd -ServerInstance "$(fqdnServerName)" -Database "$(runInDatabase)" -AccessToken "$token" -InputFile "$(sqlFullFileName)" -verbose | Out-String
-    # Write-Verbose "$cmdOutput" -Verbose
-    # echo $cmdOutput > $(logFullFileName)
-    # Write-Output "##vso[task.setvariable variable=cmdOutput;]$cmdOutput"
+        scriptType: FilePath
+        ScriptPath: $(azDbCopyScriptFullName)
+        ScriptArguments: ' -ResourceGroup ${{ parameters.resourceGroupName }} -DbServerName $(sqlServerName) -DatabaseToCopy ${{ parameters.runInDatabase }} -CopyDatabaseTo ${{ parameters.databaseCopyName }} | Out-File -FilePath $(logFullFileName)'
+      continueOnError: true
 
   # ------------------------------------------------------------------------------------------------------------------------
-  ## This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
+  # Run Powershell SqlCmd utility with Service Principal access token
+  #   See: https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps
+  # ------------------------------------------------------------------------------------------------------------------------
+  #   Note: I've tried calling the Invoke-SqlCmd directly from the AzureCLI task and it works - but I can't capture outputs...
+  #         Calling it from a PS1 file allows me to capture the output and log it for review. A bit strange but it works.
+  # ------------------------------------------------------------------------------------------------------------------------
+  - ${{ if and(eq(lower(parameters.loginAccountType), 'svc_principal'), ne(lower(parameters.sqlFileName), 'DBCOPY')) }}:
+    - task: AzureCLI@2
+      displayName: Get Access Token
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: |
+          $sqlAccessToken = az account get-access-token --resource=https://database.windows.net/ | ConvertFrom-Json | Select -ExpandProperty AccessToken
+          Write-Host "##vso[task.setvariable variable=sqlAccessToken;issecret=true;]$sqlAccessToken"
+
+    - task: AzurePowerShell@4
+      displayName: Invoke-SqlCmd PowerShell as Service Principal
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        azurePowerShellVersion: 'LatestVersion'
+        scriptType: FilePath
+        ScriptPath: $(invokeSQLScriptFullName)
+        ScriptArguments: ' -FQDNServerName $(fqdnServerName) -RunInDatabase ${{ parameters.runInDatabase }} -SqlAccessToken $(sqlAccessToken) -SqlFullFileName $(sqlFullFileName) | Out-File -FilePath $(logFullFileName)'
+      continueOnError: true
+
+  # ------------------------------------------------------------------------------------------------------------------------
+  # This seemed to be required, but it works without running the firewall change, maybe because I've got Azure services enabled...?
   # ------------------------------------------------------------------------------------------------------------------------
   # - task: AzurePowerShell@5
   #   displayName: 'Remove SQL Firewall Exception'
@@ -163,27 +194,40 @@ jobs:
   #     azureSubscription: $(serviceConnectionName)
   #     ScriptType: filePath
   #     ScriptPath: '$(Build.SourcesDirectory)\scripts\RemoveAzureFirewallRule.ps1'
-  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName $(resourceGroupName)'
+  #     ScriptArguments: '-ServerName $(sqlServerName) -ResourceGroupName ${{ parameters.resourceGroupName }}'
   #     azurePowerShellVersion: LatestVersion
 
+  # ------------------------------------------------------------------------------------------------------------------------
+  # Publish output and artifacts
+  # ------------------------------------------------------------------------------------------------------------------------
   - task: CmdLine@2
+    displayName: 'List Output Files'
     inputs:
       script: |
         echo "Directory of Staging Directory: $(Build.ArtifactStagingDirectory)"
         dir $(Build.ArtifactStagingDirectory) /s
         echo "Directory of Temp Directory: D:\a\_temp\"
         dir D:\a\_temp\ /s
-    displayName: 'List Output Files'
     continueOnError: true
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Input Artifact'
-    inputs:
-      PathtoPublish: '$(sqlFullFileName)'
-      ArtifactName: 'Input'
-      
+  - ${{ if eq(lower(parameters.sqlFileName), 'DBCOPY') }}:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Input DBCopy Artifact'
+      inputs:
+        PathtoPublish: '$(azDbCopyScriptFullName)'
+        ArtifactName: 'Input'
+      continueOnError: true
+  - ${{ if ne(lower(parameters.sqlFileName), 'DBCOPY') }}:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Input SQL Artifact'
+      inputs:
+        PathtoPublish: '$(sqlFullFileName)'
+        ArtifactName: 'Input'
+      continueOnError: true
+
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Output Artifacts'
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)\Output'
       ArtifactName: 'Output'
+    continueOnError: true

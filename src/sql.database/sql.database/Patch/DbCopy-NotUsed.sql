@@ -1,4 +1,6 @@
-﻿-- https://learn.microsoft.com/en-us/azure/azure-sql/database/database-copy
+﻿-- Replaced by call to azDbCopyCommand.ps1
+-- You can use this interactively, but it doesn't play well in a deployment pipeline
+-- https://learn.microsoft.com/en-us/azure/azure-sql/database/database-copy
 PRINT 'Running: USE master'
 USE master
 GO

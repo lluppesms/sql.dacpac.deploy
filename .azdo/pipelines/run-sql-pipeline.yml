@@ -25,21 +25,42 @@ trigger:
 
 # ----------------------------------------------------------------------------------------------------
 parameters:
-  - name: typeOfDeploy
-    displayName: Type of Deploy
+  - name: environments
+    displayName: Environment
     type: string
-    default: 'SINGLE-ENVIRONMENT'
+    default: 'DEMO'
     values:
-      - SINGLE-ENVIRONMENT
-      - MULTI-ENVIRONMENTS
-      - DB-COPY
+      - DEMO
+      - DEMO-QA
+      - DEMO-QA-PROD
   - name: loginAccountType
-    displayName: Login Account Type
+    displayName: Login Type
     default: 'SVC_PRINCIPAL'
     values:
-      - LOCAL_SQL
       - SVC_PRINCIPAL
+      - LOCAL_SQL
     type: string
+  - name: scriptName
+    displayName: Action
+    type: string
+    default: 'Patch-20240101.sql'
+    values:
+      - DBCOPY
+      - Patch-20240101.sql
+      - Patch-20240102.sql
+      - Patch-20240103.sql
+  - name: databaseName
+    displayName: Starting Database
+    type: string
+    default: 'DADABASE'
+  - name: databaseCopyName
+    displayName: Action DBCopy - Copy Database To
+    type: string
+    default: 'DADABASEV093001'
+  - name: resourceGroupName
+    displayName: Action DBCopy - Resource Group Name
+    type: string
+    default: 'rg_sqldeploy_demo'
 
 # ----------------------------------------------------------------------------------------------------
 variables:
@@ -47,30 +68,35 @@ variables:
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if eq(parameters.typeOfDeploy, 'SINGLE-ENVIRONMENT') }}:
+- ${{ if eq(parameters.environments, 'DEMO') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
-      sqlFileName: 'Patch-20240101.sql'
-      runInDatabase: 'dadabase'
+      sqlFileName: ${{ parameters.scriptName }}
+      runInDatabase: ${{ parameters.databaseName }}
       loginAccountType: ${{ parameters.loginAccountType }}
+      resourceGroupName: ${{ parameters.resourceGroupName }}
+      databaseCopyName: ${{ parameters.databaseCopyName }}
 
-- ${{ if eq(parameters.typeOfDeploy, 'MULTI-ENVIRONMENTS') }}:
+- ${{ if eq(parameters.environments, 'DEMO-QA') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
       environments: ['DEMO','QA']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
-      sqlFileName: 'Patch-20240101.sql'
-      runInDatabase: 'dadabase'
+      sqlFileName: ${{ parameters.scriptName }}
+      runInDatabase: ${{ parameters.databaseName }}
       loginAccountType: ${{ parameters.loginAccountType }}
+      resourceGroupName: ${{ parameters.resourceGroupName }}
+      databaseCopyName: ${{ parameters.databaseCopyName }}
 
-- ${{ if eq(parameters.typeOfDeploy, 'DB-COPY') }}:
+- ${{ if eq(parameters.environments, 'DEMO-QA-PROD') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
-      environments: ['DEMO']
+      environments: ['DEMO','QA','PROD']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
-      sqlFileName: 'DbCopy-20240805.sql'
-      runInDatabase: 'master'
+      sqlFileName: ${{ parameters.scriptName }}
+      runInDatabase: ${{ parameters.databaseName }}
       loginAccountType: ${{ parameters.loginAccountType }}
-
+      resourceGroupName: ${{ parameters.resourceGroupName }}
+      databaseCopyName: ${{ parameters.databaseCopyName }}

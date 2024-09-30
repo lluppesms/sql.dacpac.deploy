@@ -2,6 +2,12 @@
 # Pipeline template to run one SQL Script against an existing database
 # See https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
 # ------------------------------------------------------------------------------------------------------------------------
+# Unless you are using a local user/password, you must find the service principal name that is running
+# your pipeline and execute these commands in the Azure SQL Database to grant access:
+#   CREATE USER yourSP FROM EXTERNAL PROVIDER
+#   ALTER ROLE db_owner ADD MEMBER yourSP
+# See also https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure?view=azuresql&tabs=azure-cli#provision-microsoft-entra-admin-sql-database
+# ------------------------------------------------------------------------------------------------------------------------
 # NOTE: I've tried many ways of capturing the output of the Invoke-SqlCmd command, but I can't seem to get that to work.
 # Therefore, I have no good way in the pipeline to know if the Invoke succeeded or failed.
 # ------------------------------------------------------------------------------------------------------------------------
