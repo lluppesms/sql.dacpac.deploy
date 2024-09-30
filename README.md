@@ -36,6 +36,8 @@ See the [.azdo/pipeline/readme.md](.azdo/pipelines/readme.md) file for details o
 
 - This project is focused on database **SCHEMA** changes, not on changing to the actual **DATA** in a database (except for the initial data populate), although there is an example of running scripts as part of the update and the option to run a pipeline that just [runs a script](.azdo/pipelines/run-sql-pipeline.yml) .
 
+- For some helpful queries about permissions in a SQL database, see [permissions_queries.md](permissions_queries.md).
+
 ## References
 
 - [Blog: Continuous Delivery for Azure SQL DB](https://devblogs.microsoft.com/azure-sql/continuous-delivery-for-azure-sql-db-using-azure-devops-multi-stage-pipelines/)
