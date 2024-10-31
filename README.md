@@ -24,6 +24,23 @@ Follow these steps to publish and update a database schema to an existing Azure 
 
     > Note: the folder, solution, and project name are hard-coded into the pipelines, so if those are changed, the pipelines will need to be updated.
 
+1. If you are NOT using a local user/password, you must find the service principal name that is running your pipeline and execute these commands in the Azure SQL Database to grant that service principal access to the database:
+
+    ``` sql
+    CREATE USER yourSP FROM EXTERNAL PROVIDER
+    ALTER ROLE db_owner ADD MEMBER yourSP
+    ```
+
+    > If you don't you do this, you will probably see this error:
+
+    ``` bash
+    ##[error]Unable to connect to target server 'xxxdacpacdemo.database.windows.net'. Please verify the connection information such as the server name, login credentials, and firewall rules for the target server.
+    ##[error]Login failed for user '<token-identified principal>'.
+    ##[error]The Azure SQL DACPAC task failed. SqlPackage.exe exited with code 1.Check out how to troubleshoot failures at https://aka.ms/sqlazuredeployreadme#troubleshooting-
+    ```
+
+    > For more info, see: [https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure#provision-microsoft-entra-admin-sql-database](https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure#provision-microsoft-entra-admin-sql-database)
+
 1. When changes are made to the database, use the Schema Compare tool to compare the source database to the database project and then update the project with the changes, check in the code, and run one of the pipelines again to publish your changes.
 
     > Note: If publishing to Azure SQL, the Schema Compare options should be set to ignore Database Roles and Users, as those do not transfer well to Azure SQL. Check the changes into the repository and run the pipeline again to deploy the changes to the target server.
