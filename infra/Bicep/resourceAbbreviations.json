@@ -3,6 +3,7 @@
     "appServicePlanSuffix": "appsvc",
     "bastionAbbreviation": "bastion",
     "keyVaultAbbreviation": "vault",
+    "logworkspace": "logworkspace",
     "networkSecurityGroupAbbreviation": "nsg",
     "privateEndpointAbbreviation": "pe",
     "publicIpAbbreviation": "pip",

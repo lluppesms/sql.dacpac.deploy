@@ -34,16 +34,21 @@ See the [.azdo/pipeline/readme.md](.azdo/pipelines/readme.md) file for details o
 
 ## Additional Notes
 
-- This project is focused on database **SCHEMA** changes, not on changing to the actual **DATA** in a database (except for the initial data populate), although there is an example of running scripts as part of the update and the option to run a pipeline that just [runs a script](.azdo/pipelines/run-sql-pipeline.yml) .
+- This project is mostly focused on database **SCHEMA** changes, not on changing to the actual **DATA** in a database (except for the initial data populate). However, there is an example of running scripts as part of the post-deployment.
 
-- For some helpful queries about permissions in a SQL database, see [permissions_queries.md](permissions_queries.md).
+- In addition, this project has [a pipeline that runs a script](.azdo/pipelines/run-sql-pipeline.yml). The scripts allowed are defined in the YML code and the user may choose which one at runtime.
+- One of the custom scripts in this example does an Azure DB Copy, which must run in the Master database, so there is custom logic in the run SQL pipeline template for that.
+
+- For some helpful queries about permissions in an Azure SQL database, see [permissions_queries.md](permissions_queries.md).
 
 ## References
 
 - [Blog: Continuous Delivery for Azure SQL DB](https://devblogs.microsoft.com/azure-sql/continuous-delivery-for-azure-sql-db-using-azure-devops-multi-stage-pipelines/)
-  - [Example Pipeline from the article](https://github.com/arvindshmicrosoft/azure-sql-devops/blob/add-pipeline/azure-pipelines/deploy-sqlproj.yml)
+- [Example Pipeline from the previous article](https://github.com/arvindshmicrosoft/azure-sql-devops/blob/add-pipeline/azure-pipelines/deploy-sqlproj.yml)
 
 - [Blog: DevOps for Azure SQL](https://devblogs.microsoft.com/azure-sql/devops-for-azure-sql/)
+
+- [Blog: Deploying DACPACs to Azure SQL via Azure DevOps Pipelines](https://techcommunity.microsoft.com/t5/healthcare-and-life-sciences/deploying-dapacs-to-azure-sql-via-azure-devops-pipelines/ba-p/4227385)
 
 - [MS Learn: Azure SQL database deployment](https://learn.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml)
 

@@ -41,11 +41,6 @@ jobs:
 
   steps:
   - bash: |
-      appNameLower=$(echo "$(appName)" | tr '[:upper:]' '[:lower:]')
-      echo "appName=$(appName)"
-      echo "appNameLower=$appNameLower"
-      echo "##vso[task.setvariable variable=appNameLower]$appNameLower"
-
       resourceGroupName=$(echo "$(resourceGroupPrefix)_$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
       echo "resourceGroupName=$resourceGroupName"
       echo "##vso[task.setvariable variable=resourceGroupName]$resourceGroupName"
@@ -108,7 +103,7 @@ jobs:
       azureSubscription: $(serviceConnectionName)
       scriptType: bash
       scriptLocation: inlineScript
-      inlineScript: az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Application=$(appName) Environment=$(environmentNameUpper)
+      inlineScript: az group create --name $(resourceGroupName) --location $(location) --tags LastDeployed=$(runDateTime) Environment=$(environmentNameUpper)
 
   - task: AzureResourceManagerTemplateDeployment@3
     displayName: 'Publish Bicep Resources'

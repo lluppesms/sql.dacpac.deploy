@@ -2,6 +2,24 @@
 # Variables common to all environments
 # ----------------------------------------------------------------------------------------------------
 variables:
+  - name: resourceGroupPrefix
+    value: 'rg_sql_dacpac'
+  - name: location
+    value: 'westus'
+  - name: serviceConnectionName
+    value: 'Demo Service Connection'
+
+  - name: sqlDatabaseName
+    value: 'dadabase'
+  - name: sqlSkuFamily
+    value: 'Gen5'
+  - name: sqlSkuName
+    value: 'GP_S_Gen5'
+  - name: sqlSkuTier
+    value: 'GeneralPurpose'
+  - name: storageSku
+    value: 'Standard_LRS'
+
   - name: appFolderName
     value: 'src\sql.database'
   - name: appSolutionName
@@ -12,3 +30,5 @@ variables:
     value: 'sql.database'
   - name: appProjectExtension
     value: 'sqlproj'
+
+

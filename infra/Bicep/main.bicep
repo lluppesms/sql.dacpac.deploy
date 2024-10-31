@@ -4,14 +4,13 @@
 // To deploy this Bicep manually:
 // 	 az login
 //   az account set --subscription <subscriptionId>
-//   az deployment group create -n main-deploy-20231024T1634Z --resource-group rg_sql_demo --template-file 'main.bicep' --parameters appName=xxx-sql environmentCode=demo databaseName=dadabase sqlSkuTier=GeneralPurpose sqlSkuFamily=Gen5 sqlSkuName=GP_S_Gen5 keyVaultOwnerUserId=xxxxxxxx-xxxx-xxxx adminLoginUserSid=xxxxxxxx-xxxx-xxxx adminLoginTenantId=xxxxxxxx-xxxx-xxxx adminLoginUserId=xxxxxxxx@onmicrosoft.com
+//   az deployment group create -n main-deploy-20231024T1634Z --resource-group rg_sql_demo --template-file 'main.bicep' --parameters environmentCode=demo databaseName=dadabase sqlSkuTier=GeneralPurpose sqlSkuFamily=Gen5 sqlSkuName=GP_S_Gen5 keyVaultOwnerUserId=xxxxxxxx-xxxx-xxxx adminLoginUserSid=xxxxxxxx-xxxx-xxxx adminLoginTenantId=xxxxxxxx-xxxx-xxxx adminLoginUserId=xxxxxxxx@onmicrosoft.com
 // --------------------------------------------------------------------------------
-param appName string = ''
 @allowed(['azd','gha','azdo','dev','demo','qa','stg','ct','prod'])
 param environmentCode string = 'azd'
 param location string = resourceGroup().location
 param keyVaultOwnerUserId string = ''
-param sqlServerNamePrefix string = 'mysqlserver'
+param sqlServerNamePrefix string = ''
 param sqlDatabaseName string = 'dadabase'
 @allowed(['Basic','Standard','Premium','BusinessCritical','GeneralPurpose'])
 param sqlSkuTier string = 'GeneralPurpose'
@@ -30,7 +29,6 @@ param runDateTime string = utcNow()
 var deploymentSuffix = '-${runDateTime}'
 var commonTags = {         
   LastDeployed: runDateTime
-  Application: appName
   Environment: environmentCode
 }
 
@@ -38,8 +36,8 @@ var commonTags = {
 module resourceNames 'resourcenames.bicep' = {
   name: 'resourcenames${deploymentSuffix}'
   params: {
-    appName: appName
     environmentCode: environmentCode
+    location: location
     sqlServerNamePrefix: sqlServerNamePrefix
   }
 }

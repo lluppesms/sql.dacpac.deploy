@@ -43,21 +43,10 @@ To create this variable group, create it manually in the portal with these varia
      --name SQLDeployDemo
      --variables 
          adminLoginTenantId='<adminTenantId>'
-         adminLoginUserId='<adminUserId@domainId0>'
+         adminLoginUserId='<adminUserId@domainId>'
          adminLoginUserSid='<adminSID>'
-         appName='<uniqueName>' 
          keyVaultOwnerUserId='<owner1SID>'
-         location='eastus' 
-         resourceGroupPrefix='rg_dacpac_demo'
-         serviceConnectionName='<yourServiceConnection>' 
-         sqlServerNamePrefix='<uniqueName>'
-         sqlDatabaseName='dadabase'
+         sqlServerNamePrefix='<aGloballyUniquePrefix>'
          sqlAdminUser='yourAdminName'
          sqlAdminPassword='yourAdminPassword'
-         sqlSkuFamily='Gen5'
-         sqlSkuName='GP_S_Gen5'
-         sqlSkuTier='GeneralPurpose'
-         storageSku='Standard_LRS'
-         subscriptionId='<yourSubscriptionId>' 
-         subscriptionName='<yourAzureSubscriptionName>' 
 ```

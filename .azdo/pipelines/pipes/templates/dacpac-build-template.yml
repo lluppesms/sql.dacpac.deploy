@@ -38,7 +38,6 @@ jobs:
         echo "serviceConnectionName=$(serviceConnectionName)"
         echo "environmentNameUpper=$(environmentNameUpper)"
         echo "environmentNameLower=$(environmentNameLower)"
-        echo "appName=$(appName)"
         echo "appFolderName=${{ parameters.appFolderName }}"
         echo "appSolutionName=${{ parameters.appSolutionName }}"
         echo "appProjectName=${{ parameters.appProjectName }}"

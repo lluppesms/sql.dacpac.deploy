@@ -39,7 +39,7 @@ param publicNetworkAccess string = 'Enabled'
 param allowNetworkAccess string = 'Allow'
 
 param createUserAssignedIdentity bool = true
-param userAssignedIdentityName string = '${keyVaultName}-cicd'
+param userAssignedIdentityName string = 'id-cicd-${keyVaultName}'
 
 @description('The workspace to store audit logs.')
 @metadata({
