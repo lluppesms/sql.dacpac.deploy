@@ -62,6 +62,8 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\Views\" />
+    <Folder Include="Patch" />
+    <Folder Include="Comparison" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\JokeCategory.sql" />
@@ -69,9 +71,15 @@
     <Build Include="dbo\Tables\Joke.sql" />
     <Build Include="dbo\Stored Procedures\sp_QueryJokes.sql" />
     <Build Include="dbo\Views\vw_Jokes.sql" />
+    <Build Include="Patch\DbCopy-NotUsed.sql" />
+    <Build Include="Patch\Patch-20240101.sql" />
+    <Build Include="Patch\Patch-20240102.sql" />
+    <Build Include="Patch\Patch-20240103.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Compare_LocalDB_vs_Project.scmp" />
+    <None Include="Compare_LocalDB_vs_Azure-Dev.scmp" />
+    <None Include="Comparison\LocalDB_vs_Project.scmp" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="dbo\Post.Deployment.sql" />
