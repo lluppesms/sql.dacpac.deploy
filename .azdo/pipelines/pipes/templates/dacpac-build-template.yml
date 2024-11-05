@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
-  default:  'DEMO'
+  default:  'DEV'
 - name: appFolderName
   default: ''
 - name: appSolutionName

@@ -52,7 +52,8 @@ stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
   - template: pipes/infra-and-schema-pipe.yml
     parameters:
-      environments: ['DEMO']
+      environments: ['DEV']
+      singleEnvironment: 'true'
       appFolderName: $(appFolderName)
       appSolutionName: $(appSolutionName)
       appProjectFolderName: $(appProjectFolderName)
@@ -65,7 +66,7 @@ stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/infra-and-schema-pipe.yml
     parameters:
-      environments: ['DEMO','QA']
+      environments: ['DEV','QA','PROD']
       appFolderName: $(appFolderName)
       appSolutionName: $(appSolutionName)
       appProjectFolderName: $(appProjectFolderName)

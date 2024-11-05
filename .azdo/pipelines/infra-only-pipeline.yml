@@ -45,7 +45,7 @@ stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'false') }}:
   - template: pipes/infra-only-pipe.yml
     parameters:
-      environments: ['DEMO']
+      environments: ['DEV']
       appProjectFolderName: $(appProjectFolderName)
       appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}
@@ -54,7 +54,7 @@ stages:
 - ${{ if eq(lower(parameters.deployMultiStage), 'true') }}:
   - template: pipes/infra-only-pipe.yml
     parameters:
-      environments: ['DEV','QA']
+      environments: ['DEV','QA','PROD']
       appProjectFolderName: $(appProjectFolderName)
       appProjectExtension: $(appProjectExtension)
       runMSDevSecOpsScan: ${{ parameters.runMSDevSecOpsScan }}

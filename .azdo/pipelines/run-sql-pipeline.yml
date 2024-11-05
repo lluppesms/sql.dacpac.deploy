@@ -28,11 +28,11 @@ parameters:
   - name: environments
     displayName: Environment
     type: string
-    default: 'DEMO'
+    default: 'DEV'
     values:
-      - DEMO
-      - DEMO-QA
-      - DEMO-QA-PROD
+      - DEV
+      - DEV-QA
+      - DEV-QA-PROD
   - name: loginAccountType
     displayName: Login Type
     default: 'SVC_PRINCIPAL'
@@ -69,10 +69,10 @@ variables:
 
 # ----------------------------------------------------------------------------------------------------
 stages:
-- ${{ if eq(parameters.environments, 'DEMO') }}:
+- ${{ if eq(parameters.environments, 'DEV') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
-      environments: ['DEMO']
+      environments: ['DEV']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: ${{ parameters.scriptName }}
       runInDatabase: ${{ parameters.databaseName }}
@@ -80,10 +80,10 @@ stages:
       resourceGroupName: ${{ parameters.resourceGroupName }}
       databaseCopyName: ${{ parameters.databaseCopyName }}
 
-- ${{ if eq(parameters.environments, 'DEMO-QA') }}:
+- ${{ if eq(parameters.environments, 'DEV-QA') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
-      environments: ['DEMO','QA']
+      environments: ['DEV','QA']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: ${{ parameters.scriptName }}
       runInDatabase: ${{ parameters.databaseName }}
@@ -91,10 +91,10 @@ stages:
       resourceGroupName: ${{ parameters.resourceGroupName }}
       databaseCopyName: ${{ parameters.databaseCopyName }}
 
-- ${{ if eq(parameters.environments, 'DEMO-QA-PROD') }}:
+- ${{ if eq(parameters.environments, 'DEV-QA-PROD') }}:
   - template: pipes/run-sql-pipe.yml
     parameters:
-      environments: ['DEMO','QA','PROD']
+      environments: ['DEV','QA','PROD']
       sqlFolderName: 'src\sql.database\sql.database\Patch\'
       sqlFileName: ${{ parameters.scriptName }}
       runInDatabase: ${{ parameters.databaseName }}

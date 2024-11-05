@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------------------------------
 parameters:
 - name: environmentName
-  default: 'DEMO'
+  default: 'DEV'
 - name: templateFolderName
   default: 'infra/Bicep'
 - name: templateFileName

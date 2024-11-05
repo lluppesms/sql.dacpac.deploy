@@ -4,7 +4,9 @@
 parameters:
 - name: environments
   type: object
-  default: ['DEMO']
+  default: ['DEV']
+- name: singleEnvironment
+  default: 'false'
 - name: appFolderName
   default: ''
 - name: appSolutionName
@@ -21,7 +23,7 @@ stages:
   jobs:
   - template: templates/dacpac-build-template.yml
     parameters:
-      environmentName: 'DEMO'
+      environmentName: 'DEV'
       appFolderName: ${{ parameters.appFolderName }}
       appSolutionName: ${{ parameters.appSolutionName }}
       appProjectName: ${{ parameters.appProjectName }}
@@ -31,6 +33,9 @@ stages:
 - ${{ each environmentName in parameters.environments }} :
   - stage: Deploy${{ environmentName }}Schema
     displayName: Deploy ${{ environmentName }} Schema
+    # Condition is build complete and a single environment is being deployed, 
+    # or the environment is 'dev', or if qa/prod, the previous stage (dev->qa or qa->prod) succeeded
+    condition: or(eq(${{ parameters.singleEnvironment }}, 'true'), and(eq(upper('${{ environmentName }}'), 'QA'), succeeded('DeployDEVSchema')), and(eq(upper('${{ environmentName }}'), 'PROD'), succeeded('DeployQASchema')))
     jobs:
     - template: templates/dacpac-deploy-template.yml
       parameters:

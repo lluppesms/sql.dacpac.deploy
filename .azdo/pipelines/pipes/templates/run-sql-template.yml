@@ -10,7 +10,7 @@
 # ------------------------------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
-  default:  'DEMO'
+  default:  'DEV'
 - name: sqlFolderName
   default: ''
 - name: sqlFileName

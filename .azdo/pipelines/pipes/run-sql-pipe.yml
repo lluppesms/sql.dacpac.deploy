@@ -4,7 +4,7 @@
 parameters:
 - name: environments
   type: object
-  default: ['DEMO']
+  default: ['DEV']
 - name: sqlFolderName
   default: ''
 - name: sqlFileName

@@ -22,7 +22,7 @@
 # ----------------------------------------------------------------------------------------------------
 parameters: 
 - name: environmentName
-  default:  'DEMO'
+  default:  'DEV'
 - name: artifactName
   default: 'dacpac'
 - name: appProjectName
